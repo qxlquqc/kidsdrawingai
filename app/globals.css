@@ -199,20 +199,55 @@
   height: 200%;
   background: linear-gradient(
     to bottom right,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.1) 100%
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.03) 40%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0.03) 60%,
+    rgba(255, 255, 255, 0) 100%
   );
-  transform: rotate(30deg);
-  animation: shine 3s infinite ease-in-out;
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+/* 添加glow-effect样式 */
+.glow-effect {
+  position: relative;
+  box-shadow: 0 0 10px rgba(255, 107, 157, 0.4), 0 0 20px rgba(161, 126, 245, 0.2);
+  transition: all 0.3s ease;
+}
+
+.glow-effect:hover {
+  box-shadow: 0 0 15px rgba(255, 107, 157, 0.6), 0 0 30px rgba(161, 126, 245, 0.3);
 }
 
 @keyframes shine {
-  0% { transform: rotate(30deg) translateY(-100%); }
-  100% { transform: rotate(30deg) translateY(100%); }
+  0% { top: -100%; left: -100%; }
+  100% { top: 100%; left: 100%; }
 }
 
-/* 添加统一背景类 */
 .site-background {
-  background: linear-gradient(to bottom, #f6f9ff, white);
-  min-height: 100vh;
+  background-color: #f9f9f9;
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(255, 107, 157, 0.1), transparent 400px),
+    radial-gradient(circle at 90% 90%, rgba(161, 126, 245, 0.1), transparent 400px);
+}
+
+/* 添加动画淡入效果 */
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 按钮悬停浮动效果 */
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }

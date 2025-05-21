@@ -31,9 +31,9 @@ export default function Header() {
         <nav className="hidden md:flex gap-8">
           <Link href="/" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">Home</Link>
           <Link href="/transform/image" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">Transform</Link>
-          <Link href="#how-it-works" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">How It Works</Link>
-          <Link href="#pricing" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">Pricing</Link>
-          <Link href="#faq" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">FAQ</Link>
+          <Link href="/#how-it-works" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">How It Works</Link>
+          <Link href="/pricing" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">Pricing</Link>
+          <Link href="/#faq" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">FAQ</Link>
         </nav>
         <div className="flex gap-4 items-center">
           <Link href="/login" className="glass-card px-4 py-2 rounded-full border border-[#a17ef5]/30 text-[#a17ef5] hover:bg-[#a17ef5]/10 transition-all hover-scale hidden md:block">
@@ -55,9 +55,9 @@ export default function Header() {
         <div className="px-4 py-3 space-y-2 glass-card shadow-lg">
           <Link href="/" className="block py-2 hover:text-[#ff6b9d]">Home</Link>
           <Link href="/transform/image" className="block py-2 hover:text-[#ff6b9d]">Transform</Link>
-          <Link href="#how-it-works" className="block py-2 hover:text-[#ff6b9d]">How It Works</Link>
-          <Link href="#pricing" className="block py-2 hover:text-[#ff6b9d]">Pricing</Link>
-          <Link href="#faq" className="block py-2 hover:text-[#ff6b9d]">FAQ</Link>
+          <Link href="/#how-it-works" className="block py-2 hover:text-[#ff6b9d]">How It Works</Link>
+          <Link href="/pricing" className="block py-2 hover:text-[#ff6b9d]">Pricing</Link>
+          <Link href="/#faq" className="block py-2 hover:text-[#ff6b9d]">FAQ</Link>
           <Link href="/login" className="block py-2 text-[#a17ef5] hover:text-[#ff6b9d]">Login</Link>
         </div>
       </div>

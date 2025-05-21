@@ -30,8 +30,8 @@ export default function Home() {
               </p>
               <Link href="/transform/image">
                 <Button variant="gradient" size="roundedLg" glow={true} className="shadow-lg bg-gradient-to-r from-[#ff6b9d] to-[#a17ef5] hover:shadow-xl btn-hover-effect">
-                  Transform Drawings Now
-                </Button>
+                Transform Drawings Now
+              </Button>
               </Link>
               
               <div className="mt-8 flex flex-wrap items-center gap-6 text-gray-700 justify-center md:justify-start">
@@ -125,8 +125,8 @@ export default function Home() {
           <div className="mt-12 text-center">
             <Link href="/transform/image">
               <Button variant="gradient" size="roundedLg" glow={true} className="shadow-lg bg-gradient-to-r from-[#ff6b9d] to-[#a17ef5] hover:shadow-xl btn-hover-effect">
-                Try AI Transformation Now
-              </Button>
+              Try AI Transformation Now
+            </Button>
             </Link>
           </div>
         </div>
@@ -173,12 +173,12 @@ export default function Home() {
           
           <div className="glass-card rounded-3xl shadow-xl overflow-hidden hover-scale border border-white/30 p-10">
             <div className="text-center mb-6">
-              <div className="inline-block glass-card p-2 px-4 rounded-full border border-white/30 text-sm mb-3 bg-gradient-to-r from-[#ff80ab]/10 to-[#7c4dff]/10">
-                <span className="gradient-text font-medium">Latest AI Technology</span>
+                <div className="inline-block glass-card p-2 px-4 rounded-full border border-white/30 text-sm mb-3 bg-gradient-to-r from-[#ff80ab]/10 to-[#7c4dff]/10">
+                  <span className="gradient-text font-medium">Latest AI Technology</span>
               </div>
               <h3 className="text-2xl font-bold mb-2 gradient-text">Magical Transformations</h3>
-            </div>
-            
+                </div>
+                
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="flex flex-col glass-card p-5 rounded-xl border border-white/30 shadow-sm h-full">
                 <span className="text-[#ff6b9d] text-2xl mb-3">✨</span>
@@ -190,14 +190,14 @@ export default function Home() {
                 <span className="text-[#a17ef5] text-2xl mb-3">✨</span>
                 <span className="text-lg font-medium gradient-text mb-2">Preserve originality</span>
                 <p className="text-sm text-gray-600 flex-grow">Our AI maintains the essence and character of your child's creation</p>
-              </div>
-              
+                    </div>
+                    
               <div className="flex flex-col glass-card p-5 rounded-xl border border-white/30 shadow-sm h-full">
                 <span className="text-[#63a4ff] text-2xl mb-3">✨</span>
                 <span className="text-lg font-medium gradient-text mb-2">Smart enhancement</span>
                 <p className="text-sm text-gray-600 flex-grow">AI technology specifically trained to understand children's art</p>
-              </div>
-              
+                  </div>
+                  
               <div className="flex flex-col glass-card p-5 rounded-xl border border-white/30 shadow-sm h-full">
                 <span className="text-[#ff6b9d] text-2xl mb-3">✨</span>
                 <span className="text-lg font-medium gradient-text mb-2">Create memories</span>
@@ -211,7 +211,7 @@ export default function Home() {
                   Transform Your First Drawing
                 </Button>
               </Link>
-            </div>
+          </div>
           </div>
         </div>
       </section>
