@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env.local 
+开发.txt
+开发总.txt 
+开发中.txt
+api schema json.txt 
+supabase doc.txt
