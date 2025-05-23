@@ -48,6 +48,7 @@ export default function GenerateButton({
               }}
             ></div>
           </div>
+          <p className="text-center text-xs text-gray-500 mt-2">May take up to 90 seconds</p>
         </div>
       )}
     </div>

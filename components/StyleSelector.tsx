@@ -85,7 +85,7 @@ export default function StyleSelector({
       <div className="grid grid-cols-5 gap-2">
         {STYLE_OPTIONS.map((style) => (
           <button
-            key={style.id}
+            key={`style-${style.id}`}
             className={`
               flex flex-col items-center justify-center 
               p-3 rounded-xl transition-all

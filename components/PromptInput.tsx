@@ -12,10 +12,6 @@ export default function PromptInput({ onChange, disabled = false }: PromptInputP
   const [value, setValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   
-  useEffect(() => {
-    onChange('');
-  }, [onChange]);
-  
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setValue(newValue);

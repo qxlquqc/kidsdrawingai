@@ -5,6 +5,8 @@ import ClientCursorEffect from "@/components/client-cursor-effect";
 import { Toaster } from "@/components/ui/toaster";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { UserProvider } from "@/hooks/useUser";
+import AuthStateListener from "@/components/auth-state-listener";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,10 +24,13 @@ export default function RootLayout({
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.className} site-background`}>
         <ClientCursorEffect />
+        <UserProvider>
+          <AuthStateListener />
         <Header />
         <main className="pt-20">{children}</main>
         <Footer />
         <Toaster />
+        </UserProvider>
       </body>
     </html>
   );

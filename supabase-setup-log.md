@@ -106,3 +106,35 @@ npm install @supabase/supabase-js @supabase/ssr
 - 状态管理与Supabase客户端集成
 - 通过公共API调用Replicate AI处理图像
 - 使用Supabase托管上传图片 
+
+## 2024/05/24 - 数据库架构更新
+
+### 添加updated_at字段到user_usage表
+
+在表结构中添加了标准timestamp字段用于跟踪记录更新时间：
+
+- **表名**：user_usage
+- **更新内容**：添加updated_at字段
+- **字段详情**：
+  - 名称：updated_at
+  - 类型：TIMESTAMPTZ (带时区的时间戳)
+  - 默认值：now()
+  - 允许NULL：是
+  - 说明：记录最后更新时间
+
+- **执行的SQL**：
+  ```sql
+  ALTER TABLE user_usage 
+  ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now();
+  
+  -- 更新所有现有记录的updated_at字段为当前时间
+  UPDATE user_usage 
+  SET updated_at = now() 
+  WHERE updated_at IS NULL;
+  
+  -- 添加注释说明字段用途
+  COMMENT ON COLUMN user_usage.updated_at IS '记录最后更新时间';
+  ```
+
+- **解决的问题**：修复了代码中引用`updated_at`字段但数据库中不存在该字段的错误
+- **错误信息**：`{code: "PGST704", message: "Could not find the 'updated_at' column of 'user_usage' in the schema cache"}` 

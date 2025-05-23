@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase-browser';
 import UploadPanel from '@/components/UploadPanel';
 import PromptInput from '@/components/PromptInput';
 import StyleSelector from '@/components/StyleSelector';
@@ -10,15 +10,15 @@ import ResultDisplay from '@/components/ResultDisplay';
 import { transformImage } from '@/lib/transform';
 import { showError, showSuccess } from '@/lib/toast';
 import type { Database } from '@/lib/database.types';
+import { useUser } from '@/hooks/useUser';
+import { recordUsage } from '@/lib/supabaseApiBrowser';
 
 export default function TransformImagePage() {
+  // 获取当前用户
+  const { user } = useUser();
+  
   // Supabase客户端
-  const [supabase] = useState(() => 
-    createBrowserClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-  );
+  const [supabase] = useState(() => createClient());
 
   // 状态管理
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -96,6 +96,20 @@ export default function TransformImagePage() {
         console.log('成功设置结果图像URL', {
           resultImageUrl: result.outputUrl.substring(0, 30) + '...'
         });
+        
+        // 记录用户使用次数
+        if (user?.id) {
+          try {
+            await recordUsage(user.id);
+            console.log('已成功记录用户使用次数');
+          } catch (usageError) {
+            console.error('记录用户使用次数失败:', usageError);
+            // 不阻止主流程，只记录错误
+          }
+        } else {
+          console.warn('无法记录使用次数：用户未登录');
+        }
+        
         showSuccess('Your drawing has been transformed successfully!');
       } else {
         console.error('转换失败，没有输出URL', { error: result.error });

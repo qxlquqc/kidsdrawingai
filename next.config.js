@@ -4,7 +4,10 @@ const nextConfig = {
   experimental: {},
   env: {},
   images: {
-    domains: ['replicate.delivery'],
+    domains: [
+      'replicate.delivery',
+      'lh3.googleusercontent.com'
+    ],
   },
 };
 

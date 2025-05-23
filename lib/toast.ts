@@ -1,42 +1,69 @@
 import { toast, type ToastT } from 'sonner';
 
+// 导出toast对象，让其他组件可以直接使用
+export { toast };
+
 // Toast持续时间（毫秒）
 const DEFAULT_DURATION = 4000;
+
+// 生成唯一ID
+function generateUniqueId() {
+  return `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 /**
  * 显示成功提示
  */
-export function showSuccess(message: string, duration = DEFAULT_DURATION): any {
-  return toast.success(message, { duration });
+export function showSuccess(message: string, options = {}) {
+  return toast.success(message, {
+    duration: 3000,
+    id: generateUniqueId(),
+    ...options,
+  });
 }
 
 /**
  * 显示错误提示
  */
-export function showError(message: string, duration = DEFAULT_DURATION): any {
-  return toast.error(message, { duration });
+export function showError(message: string, options = {}) {
+  return toast.error(message, {
+    duration: 5000,
+    id: generateUniqueId(),
+    ...options,
+  });
 }
 
 /**
  * 显示警告提示
  */
 export function showWarning(message: string, duration = DEFAULT_DURATION): any {
-  return toast.warning(message, { duration });
+  return toast.warning(message, { 
+    duration,
+    id: generateUniqueId()
+  });
 }
 
 /**
  * 显示信息提示
  */
-export function showInfo(message: string, duration = DEFAULT_DURATION): any {
-  return toast.info(message, { duration });
+export function showInfo(message: string, options = {}) {
+  return toast.info(message, {
+    duration: 4000,
+    id: generateUniqueId(),
+    ...options,
+  });
 }
 
 /**
  * 显示加载中提示
  * @returns toast ID，用于更新或删除该toast
  */
-export function showLoading(message: string): any {
-  return toast.loading(message);
+export function showLoading(message: string) {
+  const id = generateUniqueId();
+  return toast.loading(message, {
+    duration: Infinity, // 不自动关闭
+    id,
+  });
 }
 
 /**
@@ -67,8 +94,12 @@ export function updateToast(id: string, message: string, type?: 'success' | 'err
 /**
  * 关闭指定的toast
  */
-export function dismissToast(id: string): void {
+export function dismissToast(id?: string) {
+  if (id) {
   toast.dismiss(id);
+  } else {
+    toast.dismiss();
+  }
 }
 
 /**
@@ -98,6 +129,7 @@ export function showCustomToast(options: {
         }
       : undefined,
     duration: options.duration || DEFAULT_DURATION,
+    id: generateUniqueId(),
   });
 }
 
@@ -113,9 +145,11 @@ export async function toastPromise<T>(
     error: string | ((error: any) => string);
   }
 ): Promise<T> {
+  const id = generateUniqueId();
   return toast.promise(promise, {
     loading: options.loading,
     success: options.success,
     error: options.error,
+    id,
   }) as unknown as Promise<T>;
 } 

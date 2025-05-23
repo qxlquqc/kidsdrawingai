@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { uploadToSupabase } from '@/lib/uploadToSupabase';
-import { showError, showLoading, updateToast } from '@/lib/toast';
+import { showError, showLoading, updateToast, showSuccess, dismissToast } from '@/lib/toast';
 import { TypedSupabaseClient } from '@/lib/supabase';
 
 interface UploadPanelProps {
@@ -15,6 +15,7 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
   const [dragActive, setDragActive] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 处理文件上传
@@ -22,9 +23,38 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
     if (isUploading) return;
     
     setIsUploading(true);
-    const toastId = showLoading('Uploading your drawing...');
+    setUploadProgress(0);
+    
+    // 显示文件大小检查提示
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > 4) {
+      showError(`File size (${fileSizeMB.toFixed(1)}MB) exceeds the 5MB limit. Please choose a smaller file.`);
+      setIsUploading(false);
+      return;
+    }
+    
+    // 创建可以取消的Toast
+    const toastId = showLoading('Preparing your drawing...');
+    
+    // 模拟上传进度更新
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        // 最多更新到95%，保留最后5%给真正的完成阶段
+        const newProgress = prev + (95 - prev) * 0.2;
+        if (newProgress > 95) {
+          clearInterval(progressInterval);
+          return 95;
+        }
+        return newProgress;
+      });
+    }, 500);
     
     try {
+      // 更新Toast提示
+      setTimeout(() => {
+        updateToast(String(toastId), 'Uploading your drawing...', 'info');
+      }, 800);
+      
       // 上传到Supabase Storage
       const imageUrl = await uploadToSupabase({
         file,
@@ -32,15 +62,33 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
         supabaseClient,
       });
       
-      // 更新Toast并设置预览图
-      updateToast(toastId, 'Drawing uploaded successfully!', 'success');
+      // 完成最后的进度
+      setUploadProgress(100);
+      clearInterval(progressInterval);
+      
+      // 关闭加载Toast，显示成功Toast
+      dismissToast(String(toastId));
+      showSuccess('Drawing uploaded successfully!');
+      
+      // 设置预览图
       setPreviewImage(URL.createObjectURL(file));
       onImageUploaded(imageUrl);
     } catch (error: any) {
       console.error('Upload error:', error);
-      updateToast(toastId, `Upload failed: ${error.message}`, 'error');
+      clearInterval(progressInterval);
+      
+      // 显示更详细的错误信息
+      dismissToast(String(toastId));
+      if (error.message.includes('timeout')) {
+        showError('Upload timed out. Please check your internet connection and try again.');
+      } else if (error.message.includes('size')) {
+        showError('File size too large. Please upload an image under 5MB.');
+      } else {
+        showError(`Upload failed: ${error.message}`);
+      }
     } finally {
       setIsUploading(false);
+      clearInterval(progressInterval);
     }
   };
 
@@ -67,7 +115,7 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
       
       // 检查文件类型
       if (!file.type.match('image.*')) {
-        showError('Please upload an image file');
+        showError('Please upload an image file (JPG, PNG, etc.)');
         return;
       }
       
@@ -129,8 +177,15 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
               priority
             />
             {isUploading && (
-              <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                <div className="animate-pulse text-[#a17ef5] font-bold">Uploading...</div>
+              <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center">
+                <div className="animate-pulse text-[#a17ef5] font-bold mb-2">Uploading...</div>
+                <div className="w-4/5 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#ff6b9d] to-[#a17ef5]"
+                    style={{ width: `${uploadProgress}%`, transition: 'width 0.3s ease' }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">{Math.round(uploadProgress)}%</div>
               </div>
             )}
           </div>
@@ -146,9 +201,21 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
               Drag and drop or click to browse
             </p>
             
+            {isUploading ? (
+              <div className="mt-4 w-full">
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#ff6b9d] to-[#a17ef5] animate-pulse"
+                    style={{ width: `${uploadProgress}%`, transition: 'width 0.3s ease' }}
+                  ></div>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">{Math.round(uploadProgress)}%</div>
+              </div>
+            ) : (
             <div className="mt-6 px-6 py-2 inline-block rounded-lg bg-white border border-gray-200 text-gray-500 text-sm">
-              Children's drawings work best!
+                JPG or PNG under 5MB
             </div>
+            )}
           </div>
         )}
       </div>
