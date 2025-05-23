@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { DEFAULT_PROMPT } from '@/lib/transform';
+import React, { useState } from 'react';
 
 interface PromptInputProps {
   onChange: (prompt: string) => void;

@@ -6,9 +6,16 @@ import { getReplicateApiToken, validateServerEnv } from '@/lib/env';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+// 使用正确的类型定义
+interface RouteParams {
+  params: {
+    id: string;
+  };
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: RouteParams
 ) {
   // 使用noStore确保不缓存此API路由的响应
   noStore();
@@ -21,7 +28,7 @@ export async function GET(
   headers.set('Surrogate-Control', 'no-store');
   
   try {
-    const id = params.id;
+    const id = context.params.id;
     console.log(`GET /api/replicate/predictions/${id}`, {timestamp: new Date().toISOString()});
 
     if (!id) {
@@ -142,7 +149,7 @@ export async function GET(
       throw fetchError; // 重新抛出其他错误以统一处理
     }
   } catch (error: any) {
-    console.error(`Error in GET /api/replicate/predictions/${params.id}:`, error);
+    console.error(`Error in GET /api/replicate/predictions/${context.params.id}:`, error);
     return NextResponse.json(
       { error: `Unexpected error: ${error.message}` },
       { 
