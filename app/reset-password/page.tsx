@@ -52,12 +52,12 @@ function ResetPasswordContent() {
         }
         
         // 检查用户是否已登录
-        const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser()
         console.log('User authentication status:', user ? 'logged in' : 'not logged in', user?.email)
         
-        if (user) {
-          setIsLoggedIn(true)
-        } else {
+      if (user) {
+        setIsLoggedIn(true)
+      } else {
           // 尝试刷新会话
           const { error: refreshError } = await supabase.auth.refreshSession()
           if (refreshError) {
@@ -73,7 +73,7 @@ function ResetPasswordContent() {
             setIsLoggedIn(true)
           } else {
             setMessage('Please click the password reset link in your email first.')
-            router.push('/login')
+        router.push('/login')
           }
         }
       } catch (error) {

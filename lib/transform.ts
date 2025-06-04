@@ -432,7 +432,7 @@ export async function transformImage(
     console.error('⚠️ NEXT_PUBLIC_REPLICATE_API_TOKEN 未在环境变量中正确配置');
     return {
       success: false,
-      error: 'API配置错误: NEXT_PUBLIC_REPLICATE_API_TOKEN未设置。请检查.env.local文件。'
+      error: 'API configuration error: NEXT_PUBLIC_REPLICATE_API_TOKEN is not set. Please check your .env.local file.'
     };
   }
   

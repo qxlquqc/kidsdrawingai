@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'API configuration error. Please check .env.local file.',
-          detail: '在.env.local中设置NEXT_PUBLIC_REPLICATE_API_TOKEN环境变量' 
+          detail: 'Please set the NEXT_PUBLIC_REPLICATE_API_TOKEN environment variable in .env.local' 
         },
         { status: 500, headers }
       );

@@ -41,7 +41,7 @@ export default function Home() {
                 </div>
                 <div className="glass-card p-3 px-4 rounded-xl flex items-center">
                   <span className="text-[#a17ef5] font-bold mr-2">🌟</span>
-                  <span>Trusted by <span className="font-semibold gradient-text-alt">100,000+</span> families</span>
+                  <span>Loved by <span className="font-semibold gradient-text-alt">families worldwide</span></span>
                 </div>
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function Home() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4"><span className="gradient-text-harmony">Premier AI Drawing Enhancement</span></h2>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Trusted by over 100,000 families to transform children's imagination into digital masterpieces!
+              Loved by families worldwide to transform children's imagination into digital masterpieces!
             </p>
           </div>
           
