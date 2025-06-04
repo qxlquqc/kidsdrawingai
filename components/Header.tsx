@@ -69,7 +69,7 @@ export default function Header() {
     }`}>
       <div className="container mx-auto flex justify-between items-center px-4">
         <Link href="/" className="font-bold text-2xl gradient-text hover-scale transition-all">
-          KidsDrawingAi
+          KidsDrawingAI
         </Link>
         <nav className="hidden md:flex gap-8">
           <Link href="/" className="hover:text-[#ff6b9d] transition-colors font-medium relative after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 hover:after:w-full after:bg-[#ff6b9d] after:transition-all">Home</Link>

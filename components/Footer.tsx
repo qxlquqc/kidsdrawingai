@@ -14,7 +14,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-16 px-6">
           {/* 左侧品牌部分 */}
           <div className="flex flex-col items-center md:items-start">
-            <h3 className="font-bold text-xl mb-5 gradient-text">KidsDrawingAi</h3>
+            <h3 className="font-bold text-xl mb-5 gradient-text">KidsDrawingAI</h3>
             <p className="text-gray-600 text-center md:text-left mb-5">
               Our AI technology brings children's imagination to life by transforming their drawings into beautiful artwork.
             </p>
@@ -64,7 +64,7 @@ export default function Footer() {
         
         {/* 版权信息 */}
         <div className="pt-8 text-sm text-center text-gray-600">
-          © 2025 KidsDrawingAi. All rights reserved.
+          © 2025 KidsDrawingAI. All rights reserved.
         </div>
       </div>
     </footer>

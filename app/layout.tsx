@@ -11,7 +11,7 @@ import AuthStateListener from "@/components/auth-state-listener";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "KidsDrawingAi - Transform Children's Drawings with AI Magic",
+  title: "KidsDrawingAI - Transform Children's Drawings with AI Magic",
   description: "Turn your child's simple drawings into beautiful artwork with our powerful AI technology. Upload, enhance, and share in seconds.",
 };
 
