@@ -90,6 +90,7 @@ export default function BeforeAfterSlider({
           src={afterImage}
           alt={afterAlt}
           fill
+          sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
           priority
         />
@@ -105,6 +106,7 @@ export default function BeforeAfterSlider({
             src={beforeImage}
             alt={beforeAlt}
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
             priority
           />

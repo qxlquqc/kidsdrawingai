@@ -89,6 +89,7 @@ export default function TransformGallery() {
                 src={`/images/gallery/sketch${currentId}.jpg`}
                 alt={`Original sketch of ${galleryData[activeIndex].title}`}
                 fill
+                sizes="(max-width: 768px) 100vw, 25vw"
                 className={`object-cover transition-opacity duration-300 
                   ${isImageLoaded(`sketch${currentId}`) ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => handleImageLoad(`sketch${currentId}`)}
@@ -113,6 +114,7 @@ export default function TransformGallery() {
                   src={`/images/gallery/style${currentId}-${num}.jpg`}
                   alt={`${galleryData[activeIndex].title} style variation ${num}`}
                   fill
+                  sizes="(max-width: 768px) 100vw, 25vw"
                   className={`object-cover transition-opacity duration-300 
                     ${isImageLoaded(`style${currentId}-${num}`) ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => handleImageLoad(`style${currentId}-${num}`)}
@@ -167,6 +169,7 @@ export default function TransformGallery() {
                   src={`/images/gallery/sketch${item.id}.jpg`}
                   alt={item.title}
                   fill
+                  sizes="(max-width: 768px) 24vw, 8vw"
                   className={`object-cover transition-opacity duration-300 
                     ${isImageLoaded(`thumb-${item.id}`) ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => handleImageLoad(`thumb-${item.id}`)}

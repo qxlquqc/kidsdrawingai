@@ -55,6 +55,7 @@ export default function ResultDisplay({
             alt="Transformed drawing"
             className="object-contain rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20"
             fill
+            sizes="(max-width: 768px) 100vw, 512px"
             priority
           />
         </div>
