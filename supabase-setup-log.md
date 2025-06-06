@@ -138,3 +138,86 @@ npm install @supabase/supabase-js @supabase/ssr
 
 - **解决的问题**：修复了代码中引用`updated_at`字段但数据库中不存在该字段的错误
 - **错误信息**：`{code: "PGST704", message: "Could not find the 'updated_at' column of 'user_usage' in the schema cache"}` 
+
+## 2024/12/29 - 套餐系统架构更新
+
+### 添加plan_type字段到user_meta表
+
+为支持多层级付费套餐，在user_meta表中添加plan_type字段：
+
+- **表名**：user_meta
+- **更新内容**：添加plan_type字段，实现套餐分级管理
+- **字段详情**：
+  - 名称：plan_type
+  - 类型：TEXT
+  - 默认值：'free'
+  - 允许NULL：否
+  - 约束：CHECK (plan_type IN ('free', 'starter_monthly', 'starter_yearly', 'explorer_monthly', 'explorer_yearly', 'creator_monthly', 'creator_yearly'))
+  - 说明：用户套餐类型，支持7种完整套餐计划
+
+- **套餐级别定义（共7种）**：
+  - `free`：免费用户（0次/月，需付费才能使用）
+  - `starter_monthly`：入门套餐月付（50次/月，$7.99/月）
+  - `starter_yearly`：入门套餐年付（50次/月，$59/年一次性付费，显示$5/月促销）
+  - `explorer_monthly`：探索套餐月付（200次/月，$14.99/月）
+  - `explorer_yearly`：探索套餐年付（200次/月，$99/年一次性付费，显示$9/月促销）
+  - `creator_monthly`：创作套餐月付（500次/月，$30/月）
+  - `creator_yearly`：创作套餐年付（500次/月，$199/年一次性付费，显示$17/月促销)
+
+- **执行的SQL**：
+  ```sql
+  -- 1. 新增 plan_type 字段到 user_meta 表
+  ALTER TABLE user_meta 
+  ADD COLUMN plan_type TEXT DEFAULT 'free';
+
+  -- 2. 添加字段注释
+  COMMENT ON COLUMN user_meta.plan_type IS '用户套餐类型: free, starter_monthly, starter_yearly, explorer_monthly, explorer_yearly, creator_monthly, creator_yearly';
+
+  -- 3. 创建检查约束
+  ALTER TABLE user_meta 
+  ADD CONSTRAINT user_meta_plan_type_check 
+  CHECK (plan_type IN (
+    'free', 
+    'starter_monthly', 
+    'starter_yearly', 
+    'explorer_monthly', 
+    'explorer_yearly', 
+    'creator_monthly', 
+    'creator_yearly'
+  ));
+
+  -- 4. 为现有记录设置合适的 plan_type 值
+  UPDATE user_meta 
+  SET plan_type = 'starter_monthly' 
+  WHERE is_paid = true;
+
+  -- 5. 创建索引
+  CREATE INDEX idx_user_meta_plan_type ON user_meta(plan_type);
+  CREATE INDEX idx_user_meta_user_plan ON user_meta(user_id, plan_type);
+
+  -- 6. 验证结果
+  SELECT plan_type, is_paid, COUNT(*) as user_count 
+  FROM user_meta 
+  GROUP BY plan_type, is_paid 
+  ORDER BY plan_type;
+  ```
+
+- **业务逻辑更新**：
+  - 免费用户无试用次数，必须付费才能使用转换功能
+  - 保留is_paid字段作为付费状态标识（向后兼容）
+  - plan_type字段精确控制不同套餐和计费周期的使用限制
+  - 现有付费用户自动升级为starter_monthly套餐
+  - 月付和年付分别管理，支持用户在计费周期间切换
+
+- **数据一致性保障**：
+  - 数据库约束确保套餐类型有效性
+  - 索引优化提升查询性能
+
+
+## 2024/12/29 - Supabase计数逻辑核心优化
+
+### 账单周期计数系统实现
+
+#### 核心改进
+- **目标**：从自然月计数改为基于用户付费日期的30天账单周期
+- **符合**：Supabase官方计费最佳实践

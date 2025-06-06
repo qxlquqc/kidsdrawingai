@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useUser } from '@/hooks/useUser'
@@ -15,8 +15,9 @@ interface UserDashboardProps {
     paid_at?: string
     username?: string
     avatar_url?: string
+    plan_type?: string
   }
-  todayUsage: number
+  monthlyUsage: number
   totalUsage: number
   usageHistory: {
     date: string
@@ -24,7 +25,7 @@ interface UserDashboardProps {
   }[]
 }
 
-export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, usageHistory }: UserDashboardProps) {
+export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage, usageHistory }: UserDashboardProps) {
   const { signOut } = useUser()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -33,24 +34,45 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
   const username = userMeta.username || user.email?.split('@')[0] || 'User'
   const avatarUrl = userMeta.avatar_url
   
+  // 获取套餐信息
+  const planType = userMeta.plan_type || 'free'
+  const getPlanInfo = (planType: string) => {
+    const planMap = {
+      'free': { name: 'Free Plan', monthlyLimit: 0, displayPrice: 'Free' },
+      'starter_monthly': { name: 'Starter Plan', monthlyLimit: 50, displayPrice: '$7.99/month' },
+      'starter_yearly': { name: 'Starter Plan (yearly)', monthlyLimit: 50, displayPrice: '$59/year' },
+      'explorer_monthly': { name: 'Explorer Plan', monthlyLimit: 200, displayPrice: '$14.99/month' },
+      'explorer_yearly': { name: 'Explorer Plan (yearly)', monthlyLimit: 200, displayPrice: '$99/year' },
+      'creator_monthly': { name: 'Creator Plan', monthlyLimit: 500, displayPrice: '$30/month' },
+      'creator_yearly': { name: 'Creator Plan (yearly)', monthlyLimit: 500, displayPrice: '$199/year' }
+    };
+    return planMap[planType as keyof typeof planMap] || planMap['free'];
+  };
+  
+  const planInfo = getPlanInfo(planType);
+  
   // 计算订阅状态
   const subscriptionStatus = userMeta.is_paid ? 'Active' : 'Free'
-  const planLabel = userMeta.is_paid ? 'Premium Plan' : 'Free Plan'
-  const usageLimit = userMeta.is_paid ? 100 : 3
-  const usagePercentage = Math.min(100, (todayUsage / usageLimit) * 100)
+  const usageLimit = planInfo.monthlyLimit
+  const usagePercentage = usageLimit > 0 ? Math.min(100, (monthlyUsage / usageLimit) * 100) : 0
 
-  // 计算总使用限制
-  const totalUsageLimit = userMeta.is_paid ? 1000 : 30
+  // 计算总使用限制 - 根据套餐调整
+  const totalUsageLimit = planInfo.monthlyLimit * 12 // 年度估算
 
   // 检查并显示使用限制提示
   const checkAndShowUsageAlert = () => {
-    if (todayUsage >= usageLimit) {
-      showInfo(`You've reached your daily limit of ${usageLimit} transformations. ${!userMeta.is_paid ? 'Consider upgrading to Premium for more!' : ''}`, {
+    if (planType === 'free') {
+      showInfo('You need a paid plan to start transforming images. Choose a plan to get started!', {
+        duration: 8000,
+        id: 'free-plan-notice'
+      });
+    } else if (monthlyUsage >= usageLimit) {
+      showInfo(`You've reached your monthly limit of ${usageLimit} transformations. Your limit will reset next month.`, {
         duration: 8000,
         id: 'usage-limit-reached'
       });
-    } else if (todayUsage >= usageLimit * 0.8) {
-      showInfo(`You're approaching your daily limit! ${todayUsage} of ${usageLimit} transformations used.`, {
+    } else if (monthlyUsage >= usageLimit * 0.8) {
+      showInfo(`You're approaching your monthly limit! ${monthlyUsage} of ${usageLimit} transformations used.`, {
         duration: 6000,
         id: 'usage-limit-warning'
       });
@@ -58,9 +80,9 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
   };
 
   // 当组件挂载时检查使用情况
-  useState(() => {
+  useEffect(() => {
     checkAndShowUsageAlert();
-  });
+  }, [monthlyUsage, usageLimit, planType]);
 
   // 处理登出
   const handleLogout = async () => {
@@ -81,18 +103,25 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
 
   // 处理转换页面跳转
   const handleTransformClick = () => {
-    // 如果用户已达到限制，显示提示
-    if (todayUsage >= usageLimit) {
-      if (!userMeta.is_paid) {
-        toast.error("You've reached your daily limit. Upgrade to continue transforming!", {
-          action: {
-            label: 'Upgrade',
-            onClick: () => router.push('/pricing')
-          }
-        });
-      } else {
-        toast.error("You've reached your daily limit of 100 transformations.");
-      }
+    // 免费用户需要先升级
+    if (planType === 'free') {
+      toast.error("You need a paid plan to transform images. Choose a plan to get started!", {
+        action: {
+          label: 'Choose Plan',
+          onClick: () => router.push('/pricing')
+        }
+      });
+      return;
+    }
+    
+    // 如果用户已达到月度限制，显示提示
+    if (monthlyUsage >= usageLimit) {
+      toast.error(`You've reached your monthly limit of ${usageLimit} transformations. Your limit will reset next month.`, {
+        action: {
+          label: 'Upgrade Plan',
+          onClick: () => router.push('/pricing')
+        }
+      });
       return;
     }
     
@@ -152,7 +181,7 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
             <h3 className="text-lg font-semibold mb-2">Subscription Status</h3>
             <div className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
               <div>
-                <span className="block text-xl font-bold">{planLabel}</span>
+                <span className="block text-xl font-bold">{planInfo.name}</span>
                 <span className={`text-sm ${userMeta.is_paid ? 'text-green-600' : 'text-gray-500'}`}>
                   {subscriptionStatus}
                 </span>
@@ -163,7 +192,7 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
                   href="/pricing" 
                   className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium rounded-lg transition transform hover:scale-105"
                 >
-                  Upgrade Now
+                  Choose Plan
                 </Link>
               )}
             </div>
@@ -172,23 +201,29 @@ export default function UserDashboard({ user, userMeta, todayUsage, totalUsage, 
           {/* 使用情况 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Today's Usage</h3>
+              <h3 className="text-lg font-semibold mb-2">Monthly Usage</h3>
               <div className="mb-2">
                 <div className="flex justify-between mb-1">
-                  <span>{todayUsage} / {usageLimit}</span>
-                  <span>{Math.round(usagePercentage)}%</span>
+                  <span>{monthlyUsage} / {usageLimit}</span>
+                  <span>{usageLimit > 0 ? Math.round(usagePercentage) : 0}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className={`h-2.5 rounded-full ${usagePercentage > 80 ? 'bg-red-500' : 'bg-gradient-to-r from-purple-500 to-pink-500'}`}
-                    style={{ width: `${usagePercentage}%` }}
-                  ></div>
-                </div>
+                {usageLimit > 0 ? (
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className={`h-2.5 rounded-full ${usagePercentage > 80 ? 'bg-red-500' : 'bg-gradient-to-r from-purple-500 to-pink-500'}`}
+                      style={{ width: `${usagePercentage}%` }}
+                    ></div>
+                  </div>
+                ) : (
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="h-2.5 rounded-full bg-gray-300 w-0"></div>
+                  </div>
+                )}
               </div>
               <p className="text-sm text-gray-500">
-                {userMeta.is_paid 
-                  ? 'Premium users can generate up to 100 images per day.' 
-                  : 'Free users can generate up to 3 images per day.'}
+                {planType === 'free' 
+                  ? 'You need a paid plan to transform images.'
+                  : `Your ${planInfo.name} includes ${usageLimit} transformations per month.`}
               </p>
             </div>
             

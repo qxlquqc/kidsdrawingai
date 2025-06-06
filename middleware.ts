@@ -62,6 +62,7 @@ export async function middleware(request: NextRequest) {
   // 检查受保护路由
   const url = new URL(request.url)
   const isDashboardRoute = url.pathname.startsWith('/dashboard')
+  const isTransformRoute = url.pathname.startsWith('/transform')
   
   // 检查是否为密码重置相关路由
   const isResetPasswordRoute = url.pathname.startsWith('/reset-password')
@@ -76,7 +77,7 @@ export async function middleware(request: NextRequest) {
   
   // 如果是需要认证的路由但用户未登录，重定向到登录页
   // 注意：密码重置相关路由不需要认证
-  if (isDashboardRoute && !user && !isResetPasswordRoute && !isAuthCallbackWithReset) {
+  if ((isDashboardRoute || isTransformRoute) && !user && !isResetPasswordRoute && !isAuthCallbackWithReset) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

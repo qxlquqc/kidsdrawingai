@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import UserDashboard from './user-dashboard'
-import { getUserMeta, getTodayUsage, getTotalUsage, getUsageHistory } from '@/lib/supabaseApiServer'
+import { getUserMeta, getCurrentMonthUsage, getTotalUsage, getUsageHistory } from '@/lib/supabaseApiServer'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -18,8 +18,8 @@ export default async function DashboardPage() {
   // 获取用户元数据
   const userMeta = await getUserMeta(user.id);
 
-  // 获取今日使用情况
-  const todayUsage = await getTodayUsage(user.id);
+  // 获取当月使用情况
+  const monthlyUsageInfo = await getCurrentMonthUsage(user.id);
 
   // 获取总使用情况
   const totalGenerationCount = await getTotalUsage(user.id);
@@ -31,8 +31,14 @@ export default async function DashboardPage() {
   return (
     <UserDashboard 
       user={user}
-      userMeta={userMeta || { is_paid: false }}
-      todayUsage={todayUsage || 0}
+      userMeta={userMeta || { 
+        is_paid: false, 
+        plan_type: 'free',
+        username: null,
+        avatar_url: null,
+        paid_at: undefined
+      }}
+      monthlyUsage={monthlyUsageInfo?.usage || 0}
       totalUsage={totalGenerationCount}
       usageHistory={usageHistory}
     />

@@ -8,17 +8,32 @@ import StyleSelector from '@/components/StyleSelector';
 import GenerateButton from '@/components/GenerateButton';
 import ResultDisplay from '@/components/ResultDisplay';
 import { transformImage } from '@/lib/transform';
-import { showError, showSuccess } from '@/lib/toast';
+import { showError, showSuccess, showInfo } from '@/lib/toast';
 import type { Database } from '@/lib/database.types';
 import { useUser } from '@/hooks/useUser';
 import { recordUsage } from '@/lib/supabaseApiBrowser';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function TransformImagePage() {
   // 获取当前用户
   const { user } = useUser();
+  const router = useRouter();
   
   // Supabase客户端
   const [supabase] = useState(() => createClient());
+
+  // 用户权限状态
+  const [userPermissions, setUserPermissions] = useState<{
+    canGenerate: boolean;
+    currentUsage: number;
+    limit: number;
+    remaining: number;
+    isPaid: boolean;
+    planType: string;
+    billingCycleEnd?: string;
+  } | null>(null);
+  const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
 
   // 状态管理
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -28,6 +43,48 @@ export default function TransformImagePage() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
+
+  // 检查用户权限
+  useEffect(() => {
+    async function checkUserPermissions() {
+      if (!user?.id) {
+        // 用户未登录，重定向到登录页
+        router.push('/login');
+        return;
+      }
+
+      try {
+        // 调用服务端API检查权限
+        const response = await fetch('/api/check-permissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id })
+        });
+
+        if (response.ok) {
+          const permissions = await response.json();
+          setUserPermissions(permissions);
+          
+          // 如果是免费用户，显示提示
+          if (permissions.planType === 'free') {
+            showInfo('You need a paid plan to transform images. Choose a plan to get started!', {
+              duration: 10000,
+              id: 'free-plan-notice'
+            });
+          }
+        } else {
+          throw new Error('Failed to check permissions');
+        }
+      } catch (error) {
+        console.error('检查用户权限失败:', error);
+        showError('Failed to verify your account. Please try again.');
+      } finally {
+        setIsCheckingPermissions(false);
+      }
+    }
+
+    checkUserPermissions();
+  }, [user, router]);
   
   const handleImageUpload = (url: string) => {
     console.log('Image uploaded:', url);
@@ -54,6 +111,40 @@ export default function TransformImagePage() {
   };
   
   const handleGenerate = async () => {
+    // 预检查权限
+    if (!userPermissions) {
+      showError('Please wait while we verify your account...');
+      return;
+    }
+
+    if (!userPermissions.canGenerate) {
+      if (userPermissions.planType === 'free') {
+        showError('You need a paid plan to transform images. Choose a plan to get started!', {
+          action: {
+            label: 'Choose Plan',
+            onClick: () => router.push('/pricing')
+          }
+        });
+        return;
+      } else {
+        // 付费用户达到月度限制的详细提示
+        const resetDate = userPermissions.billingCycleEnd ? 
+          new Date(userPermissions.billingCycleEnd).toLocaleDateString('en-US', { 
+            month: 'long', 
+            day: 'numeric' 
+          }) : 'next month';
+          
+        showError(`You've reached your monthly limit of ${userPermissions.limit} transformations. Your limit will reset on ${resetDate}. You can upgrade to a higher plan for more transformations.`, {
+          duration: 10000,
+          action: {
+            label: 'Upgrade Plan',
+            onClick: () => router.push('/pricing')
+          }
+        });
+        return;
+      }
+    }
+
     if (!uploadedImageUrl) {
       showError('Please upload a drawing first');
       return;
@@ -102,6 +193,15 @@ export default function TransformImagePage() {
           try {
             await recordUsage(user.id);
             console.log('已成功记录用户使用次数');
+            
+            // 更新权限状态
+            const newUsage = userPermissions.currentUsage + 1;
+            setUserPermissions({
+              ...userPermissions,
+              currentUsage: newUsage,
+              remaining: Math.max(0, userPermissions.limit - newUsage),
+              canGenerate: newUsage < userPermissions.limit
+            });
           } catch (usageError) {
             console.error('记录用户使用次数失败:', usageError);
             // 不阻止主流程，只记录错误
@@ -124,7 +224,81 @@ export default function TransformImagePage() {
       setIsGenerating(false);
     }
   };
-  
+
+  // 权限检查中的加载状态
+  if (isCheckingPermissions) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying your account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 免费用户显示升级提示
+  if (userPermissions?.planType === 'free') {
+    return (
+      <div className="min-h-screen py-12 px-4">
+        <div className="container mx-auto max-w-2xl text-center">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-8">
+            <div className="text-6xl mb-6">🎨</div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">Choose a Plan to Start Creating</h1>
+            <p className="text-gray-600 mb-8 text-lg">
+              Transform your children's drawings into magical digital artwork with our AI-powered tool.
+              Choose a plan that fits your family's creative needs.
+            </p>
+            <div className="space-y-4">
+              <Link 
+                href="/pricing"
+                className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium rounded-lg transition transform hover:scale-105"
+              >
+                Choose Your Plan
+              </Link>
+              <div className="text-sm text-gray-500">
+                <Link href="/dashboard" className="underline hover:text-purple-600">
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 已达到使用限制的付费用户
+  if (userPermissions && !userPermissions.canGenerate && userPermissions.planType !== 'free') {
+    return (
+      <div className="min-h-screen py-12 px-4">
+        <div className="container mx-auto max-w-2xl text-center">
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-8">
+            <div className="text-6xl mb-6">📊</div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-4">Monthly Limit Reached</h1>
+            <p className="text-gray-600 mb-6 text-lg">
+              You've used all {userPermissions.limit} transformations for this month. 
+              Your limit will reset next month, or you can upgrade to a higher plan for more transformations.
+            </p>
+            <div className="space-y-4">
+              <Link 
+                href="/pricing"
+                className="inline-block px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium rounded-lg transition transform hover:scale-105"
+              >
+                Upgrade Plan
+              </Link>
+              <div className="text-sm text-gray-500">
+                <Link href="/dashboard" className="underline hover:text-purple-600">
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen py-12 px-4 relative overflow-hidden">
       {/* Abstract Shapes Background */}

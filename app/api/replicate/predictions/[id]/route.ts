@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { getReplicateApiToken, validateServerEnv } from '@/lib/env';
+import { createClient } from '@/lib/supabase-server';
 
 // 禁用路由缓存，确保每次请求都读取最新的环境变量
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,18 @@ export async function GET(
       return NextResponse.json({ error: 'Missing prediction ID' }, { status: 400, headers });
     }
 
+    // 用户认证检查
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.log('Authentication failed:', authError?.message || 'No user');
+      return NextResponse.json(
+        { error: 'Unauthorized. Please log in first.' },
+        { status: 401, headers }
+      );
+    }
+
     // 验证环境变量
     const envValidation = validateServerEnv();
     if (!envValidation.valid) {
@@ -66,7 +79,7 @@ export async function GET(
     }
 
     // 调用Replicate API获取预测状态
-    console.log(`准备获取预测 ${id} 的状态，使用token头部:`, 
+    console.log(`准备获取预测 ${id} 的状态，用户: ${user.id}，使用token头部:`, 
       REPLICATE_API_TOKEN ? `Token ${REPLICATE_API_TOKEN.substring(0, 3)}...${REPLICATE_API_TOKEN.substring(REPLICATE_API_TOKEN.length-3)}` : '无token');
     
     // 创建AbortController用于超时控制

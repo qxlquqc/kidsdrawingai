@@ -16,6 +16,7 @@ export interface Database {
           avatar_url: string | null
           is_paid: boolean
           paid_at: string | null
+          plan_type: string
           created_at: string
           updated_at: string
         }
@@ -25,6 +26,7 @@ export interface Database {
           avatar_url?: string | null
           is_paid?: boolean
           paid_at?: string | null
+          plan_type?: string
           created_at?: string
           updated_at?: string
         }
@@ -34,6 +36,7 @@ export interface Database {
           avatar_url?: string | null
           is_paid?: boolean
           paid_at?: string | null
+          plan_type?: string
           created_at?: string
           updated_at?: string
         }

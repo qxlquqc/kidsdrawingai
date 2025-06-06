@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_noStore as noStore } from 'next/cache';
 import { getReplicateApiToken, validateServerEnv } from '@/lib/env';
+import { createClient } from '@/lib/supabase-server';
+import { canGenerateImage } from '@/lib/supabaseApiServer';
 
 // 禁用路由缓存，确保每次请求都读取最新的环境变量
 export const dynamic = 'force-dynamic';
@@ -20,8 +22,43 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 处理POST /api/replicate/predictions请求', {timestamp: new Date().toISOString()});
     
+    // 用户认证和权限检查
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.log('Authentication failed:', authError?.message || 'No user');
+      return NextResponse.json(
+        { error: 'Unauthorized. Please log in first.' },
+        { status: 401, headers }
+      );
+    }
+
+    // 检查用户生成权限
+    const permission = await canGenerateImage(user.id);
+    if (!permission.canGenerate) {
+      console.log('Permission denied for user:', user.id, 'Current usage:', permission.currentUsage, 'Limit:', permission.limit);
+      
+      let reason = 'Access denied';
+      if (permission.planType === 'free') {
+        reason = 'Free users need to upgrade to generate images';
+      } else if (permission.currentUsage >= permission.limit) {
+        reason = `Monthly limit reached (${permission.currentUsage}/${permission.limit})`;
+      }
+      
+      return NextResponse.json(
+        { 
+          error: 'Permission denied',
+          reason: reason,
+          details: permission
+        },
+        { status: 403, headers }
+      );
+    }
+
     const body = await request.json();
     console.log('POST /api/replicate/predictions', { 
+      userId: user.id,
       body: {
         model: body.model,
         input: body.input ? '已提供' : '未提供',
@@ -57,6 +94,7 @@ export async function POST(request: NextRequest) {
 
     // 详细记录input对象的内容（截断图片URL以避免日志过长）
     console.log('🧪 API路由：完整的请求参数:', {
+      userId: user.id,
       model: body.model,
       input: {
         ...body.input,
@@ -125,6 +163,7 @@ export async function POST(request: NextRequest) {
 
       const prediction = await response.json();
       console.log('Replicate API成功响应:', { 
+        userId: user.id,
         id: prediction.id,
         status: prediction.status 
       });

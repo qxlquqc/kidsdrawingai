@@ -174,25 +174,103 @@ export async function getUsageHistory(userId: string, limit = 10) {
   return data || [];
 }
 
+// 获取套餐限制信息
+function getPlanLimits(planType: string) {
+  const limits = {
+    'free': { monthlyLimit: 0 },
+    'starter_monthly': { monthlyLimit: 50 },
+    'starter_yearly': { monthlyLimit: 50 },
+    'explorer_monthly': { monthlyLimit: 200 },
+    'explorer_yearly': { monthlyLimit: 200 },
+    'creator_monthly': { monthlyLimit: 500 },
+    'creator_yearly': { monthlyLimit: 500 }
+  };
+  return limits[planType as keyof typeof limits] || limits['free'];
+}
+
+// 获取当月使用情况 - 基于用户账单周期（30天）而非自然月
+export async function getCurrentMonthUsage(userId: string) {
+  const supabase = await createClient();
+  
+  // 获取用户付费信息
+  const userMeta = await getUserMeta(userId);
+  
+  let billingCycleStart: Date;
+  
+  if (userMeta?.paid_at) {
+    // 有付费记录，使用付费日期作为账单周期开始
+    const paidDate = new Date(userMeta.paid_at);
+    const today = new Date();
+    
+    // 计算距离付费日期已过了多少个30天周期
+    const daysSincePaid = Math.floor((today.getTime() - paidDate.getTime()) / (1000 * 60 * 60 * 24));
+    const cyclesPassed = Math.floor(daysSincePaid / 30);
+    
+    // 当前账单周期开始日期
+    billingCycleStart = new Date(paidDate);
+    billingCycleStart.setDate(paidDate.getDate() + (cyclesPassed * 30));
+  } else {
+    // 没有付费记录，使用注册日期或当前自然月
+    // 对于免费用户，使用自然月即可
+    const now = new Date();
+    billingCycleStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  
+  // 账单周期结束日期（30天后）
+  const billingCycleEnd = new Date(billingCycleStart);
+  billingCycleEnd.setDate(billingCycleStart.getDate() + 30);
+  
+  // 格式化日期为 YYYY-MM-DD
+  const startDate = billingCycleStart.toISOString().split('T')[0];
+  const endDate = billingCycleEnd.toISOString().split('T')[0];
+  
+  const { data, error } = await supabase
+    .from('user_usage')
+    .select('generation_count')
+    .eq('user_id', userId)
+    .gte('date', startDate)
+    .lt('date', endDate);
+    
+  if (error) {
+    console.error('获取当月使用情况错误:', error);
+    throw error;
+  }
+  
+  const totalUsage = data?.reduce((sum, record) => sum + (record.generation_count || 0), 0) || 0;
+  
+  // 返回使用情况和周期信息
+  return {
+    usage: totalUsage,
+    billingCycleStart,
+    billingCycleEnd,
+    isInCurrentCycle: true
+  };
+}
+
 // 检查用户是否可以生成图像（是否超过使用限制）
 export async function canGenerateImage(userId: string) {
   try {
-    // 获取用户元数据（检查是否付费用户）
+    // 获取用户元数据（检查是否付费用户和套餐类型）
     const userMeta = await getUserMeta(userId);
+    const planType = userMeta?.plan_type || 'free';
     const isPaid = userMeta?.is_paid || false;
     
-    // 获取今日使用情况
-    const todayUsage = await getTodayUsage(userId);
+    // 获取套餐限制
+    const limits = getPlanLimits(planType);
     
-    // 付费用户每天限制100张，免费用户每天限制3张
-    const limit = isPaid ? 100 : 3;
+    // 获取当前账单周期使用情况
+    const monthlyUsageInfo = await getCurrentMonthUsage(userId);
+    const monthlyUsage = monthlyUsageInfo.usage;
     
     return {
-      canGenerate: todayUsage < limit,
-      currentUsage: todayUsage,
-      limit,
-      remaining: Math.max(0, limit - todayUsage),
-      isPaid
+      canGenerate: monthlyUsage < limits.monthlyLimit,
+      currentUsage: monthlyUsage,
+      limit: limits.monthlyLimit,
+      remaining: Math.max(0, limits.monthlyLimit - monthlyUsage),
+      isPaid,
+      planType,
+      billingCycleStart: monthlyUsageInfo.billingCycleStart,
+      billingCycleEnd: monthlyUsageInfo.billingCycleEnd
     };
   } catch (error) {
     console.error('检查生成权限错误:', error);

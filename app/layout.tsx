@@ -26,10 +26,10 @@ export default function RootLayout({
         <ClientCursorEffect />
         <UserProvider>
           <AuthStateListener />
-          <Header />
-          <main className="pt-20">{children}</main>
-          <Footer />
-          <Toaster />
+        <Header />
+        <main className="pt-20">{children}</main>
+        <Footer />
+        <Toaster />
         </UserProvider>
       </body>
     </html>
