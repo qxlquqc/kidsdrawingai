@@ -2,12 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase-browser";
 
 export default function PricingPage() {
   // 添加切换年度/月度计划的状态
   const [isYearly, setIsYearly] = useState(false);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
   
   // 计划数据 - 包含月度和年度价格
   const plans = [
@@ -60,6 +66,79 @@ export default function PricingPage() {
       ctaText: "Go Creator"
     }
   ];
+
+  // 处理支付点击
+  const handlePayment = async (planId: string) => {
+    console.log('💳 ================================');
+    console.log('💳 Payment button clicked');
+    console.log('💳 Plan ID:', planId);
+    console.log('💳 Is Yearly:', isYearly);
+    console.log('💳 Timestamp:', new Date().toISOString());
+    console.log('💳 ================================');
+
+    // 构建plan_type (planId_monthly 或 planId_yearly)
+    const planType = `${planId}_${isYearly ? 'yearly' : 'monthly'}`;
+    console.log('💳 Constructed plan type:', planType);
+
+    setLoadingPlan(planId);
+
+    try {
+      // 1. 检查用户登录状态
+      console.log('👤 Checking user authentication...');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      console.log('👤 Auth result:', { user: user?.id, error: authError });
+      
+      if (authError || !user) {
+        console.log('❌ User not authenticated, redirecting to login');
+        toast.error("Please log in to purchase a plan");
+        router.push('/login');
+        return;
+      }
+
+      console.log('✅ User authenticated:', user.email);
+
+      // 2. 调用checkout API
+      console.log('🛒 Calling checkout API...');
+      console.log('🛒 Request data:', { plan_type: planType });
+      
+      const response = await fetch('/api/creem/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          plan_type: planType
+        }),
+      });
+
+      console.log('📡 Checkout API response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📡 Checkout API response data:', data);
+
+      if (!response.ok) {
+        console.error('❌ Checkout API failed:', data);
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // 3. 重定向到Creem支付页面
+      if (data.checkout_url) {
+        console.log('🔗 Redirecting to checkout URL:', data.checkout_url);
+        toast.success("Redirecting to secure payment...");
+        window.location.href = data.checkout_url;
+      } else {
+        console.error('❌ No checkout URL in response:', data);
+        throw new Error('No checkout URL received');
+      }
+
+    } catch (error) {
+      console.error('💥 Payment error:', error);
+      toast.error(error instanceof Error ? error.message : "Payment initialization failed");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <div className="min-h-screen py-12 px-4 relative overflow-hidden">
@@ -181,8 +260,10 @@ export default function PricingPage() {
                     glow={true} 
                     size="roundedLg" 
                     className="w-full hover:shadow-xl btn-hover-effect"
+                    onClick={() => handlePayment(plan.id)}
+                    disabled={loadingPlan === plan.id}
                   >
-                    {plan.ctaText}
+                    {loadingPlan === plan.id ? 'Processing...' : plan.ctaText}
                   </Button>
                 </CardFooter>
               </Card>

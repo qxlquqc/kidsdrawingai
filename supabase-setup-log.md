@@ -221,3 +221,170 @@ npm install @supabase/supabase-js @supabase/ssr
 #### 核心改进
 - **目标**：从自然月计数改为基于用户付费日期的30天账单周期
 - **符合**：Supabase官方计费最佳实践
+
+## 2024/12/30 - Payment Events 表创建
+
+### 创建payment_events表用于Creem支付集成
+
+为支持Creem支付webhook集成，创建专门的支付事件表：
+
+- **表名**：payment_events
+- **目的**：记录所有Creem支付相关事件，确保webhook处理的幂等性
+- **特性**：包含用户自读RLS策略、事件类型约束、支持UPSERT操作
+
+```sql
+-- 创建payment_events表
+CREATE TABLE public.payment_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id TEXT UNIQUE NOT NULL,
+    event_type TEXT NOT NULL,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    plan_type TEXT,
+    creem_customer_id TEXT,
+    creem_order_id TEXT,
+    amount INTEGER,
+    currency TEXT DEFAULT 'usd',
+    processed_at TIMESTAMPTZ DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    
+    -- 事件类型约束
+    CONSTRAINT payment_events_event_type_check 
+    CHECK (event_type IN (
+        'checkout.completed',
+        'subscription.active', 
+        'subscription.paid',
+        'subscription.trialing',
+        'subscription.update',
+        'subscription.canceled',
+        'subscription.expired',
+        'refund.created'
+    )),
+    
+    -- 套餐类型约束（与user_meta保持一致）
+    CONSTRAINT payment_events_plan_type_check 
+    CHECK (plan_type IN (
+        'free',
+        'starter_monthly',
+        'starter_yearly', 
+        'explorer_monthly',
+        'explorer_yearly',
+        'creator_monthly',
+        'creator_yearly'
+    ) OR plan_type IS NULL)
+);
+
+-- 创建索引
+CREATE UNIQUE INDEX idx_payment_events_event_id ON public.payment_events(event_id);
+CREATE INDEX idx_payment_events_user_id ON public.payment_events(user_id);
+CREATE INDEX idx_payment_events_type ON public.payment_events(event_type);
+CREATE INDEX idx_payment_events_processed_at ON public.payment_events(processed_at DESC);
+
+-- 启用RLS
+ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
+
+-- RLS策略1：用户可以查看自己的支付事件
+CREATE POLICY "Users can view own payment events" ON public.payment_events
+    FOR SELECT USING (auth.uid() = user_id);
+
+-- RLS策略2：Service role可以管理所有支付事件（webhook使用）
+CREATE POLICY "Service role can manage payment events" ON public.payment_events
+    FOR ALL USING (auth.role() = 'service_role');
+
+-- 授权给service role
+GRANT ALL ON public.payment_events TO service_role;
+
+-- 添加注释
+COMMENT ON TABLE public.payment_events IS 'Creem支付事件记录表，确保webhook处理幂等性';
+COMMENT ON COLUMN public.payment_events.event_id IS 'Creem事件唯一标识，确保幂等性';
+COMMENT ON COLUMN public.payment_events.event_type IS 'Creem事件类型';
+COMMENT ON COLUMN public.payment_events.user_id IS '关联用户ID';
+COMMENT ON COLUMN public.payment_events.plan_type IS '对应的套餐类型';
+COMMENT ON COLUMN public.payment_events.metadata IS '完整的webhook载荷数据';
+```
+
+### UPSERT函数（可选）
+
+为方便webhook处理，创建UPSERT函数：
+
+```sql
+-- 创建payment_events的UPSERT函数
+CREATE OR REPLACE FUNCTION upsert_payment_event(
+    p_event_id TEXT,
+    p_event_type TEXT,
+    p_user_id UUID,
+    p_plan_type TEXT DEFAULT NULL,
+    p_creem_customer_id TEXT DEFAULT NULL,
+    p_creem_order_id TEXT DEFAULT NULL,
+    p_amount INTEGER DEFAULT NULL,
+    p_currency TEXT DEFAULT 'usd',
+    p_metadata JSONB DEFAULT '{}'::jsonb
+) RETURNS UUID AS $$
+DECLARE
+    result_id UUID;
+BEGIN
+    INSERT INTO public.payment_events (
+        event_id,
+        event_type,
+        user_id,
+        plan_type,
+        creem_customer_id,
+        creem_order_id,
+        amount,
+        currency,
+        metadata
+    ) VALUES (
+        p_event_id,
+        p_event_type,
+        p_user_id,
+        p_plan_type,
+        p_creem_customer_id,
+        p_creem_order_id,
+        p_amount,
+        p_currency,
+        p_metadata
+    )
+    ON CONFLICT (event_id) 
+    DO UPDATE SET
+        processed_at = NOW(),
+        metadata = EXCLUDED.metadata
+    RETURNING id INTO result_id;
+    
+    RETURN result_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 授权给service role使用此函数
+GRANT EXECUTE ON FUNCTION upsert_payment_event TO service_role;
+```
+
+### 执行验证
+
+```sql
+-- 验证表创建
+SELECT 
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns 
+WHERE table_name = 'payment_events'
+ORDER BY ordinal_position;
+
+-- 验证约束
+SELECT 
+    constraint_name,
+    constraint_type
+FROM information_schema.table_constraints 
+WHERE table_name = 'payment_events';
+
+-- 验证RLS策略
+SELECT 
+    schemaname,
+    tablename,
+    policyname,
+    cmd,
+    qual
+FROM pg_policies 
+WHERE tablename = 'payment_events';
+```

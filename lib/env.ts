@@ -20,6 +20,25 @@ export const serverEnv = {
     '',
 };
 
+// Creem Payment Configuration
+export const creemEnv = {
+  API_URL: process.env.CREEM_API_URL || 'https://test-api.creem.io/v1',
+  API_KEY: process.env.CREEM_API_KEY || '',
+  WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET || '',
+  SUCCESS_URL: process.env.CREEM_SUCCESS_URL || '',
+  CANCEL_URL: process.env.CREEM_CANCEL_URL || '',
+  
+  // Product IDs for all plans
+  PRODUCTS: {
+    STARTER_MONTHLY: process.env.CREEM_PID_STARTER_MONTHLY || '',
+    STARTER_YEARLY: process.env.CREEM_PID_STARTER_YEARLY || '',
+    EXPLORER_MONTHLY: process.env.CREEM_PID_EXPLORER_MONTHLY || '',
+    EXPLORER_YEARLY: process.env.CREEM_PID_EXPLORER_YEARLY || '',
+    CREATOR_MONTHLY: process.env.CREEM_PID_CREATOR_MONTHLY || '',
+    CREATOR_YEARLY: process.env.CREEM_PID_CREATOR_YEARLY || '',
+  }
+};
+
 /**
  * 验证服务器端环境变量是否正确配置
  * @returns {boolean} 环境变量是否正确配置
@@ -69,4 +88,20 @@ export function getReplicateApiToken(): string {
   }
   
   return token;
+}
+
+export function validateCreemEnv(): { valid: boolean; missingVars: string[] } {
+  const requiredVars = [
+    'CREEM_API_KEY',
+    'CREEM_WEBHOOK_SECRET',
+    'CREEM_SUCCESS_URL',
+    'CREEM_CANCEL_URL'
+  ];
+  
+  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  
+  return {
+    valid: missingVars.length === 0,
+    missingVars
+  };
 } 

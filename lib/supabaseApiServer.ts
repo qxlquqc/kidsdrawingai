@@ -9,6 +9,10 @@ import { User } from '@supabase/supabase-js';
 
 // 获取用户元数据
 export async function getUserMeta(userId: string) {
+  console.log('📋 ================================');
+  console.log('📋 Getting user metadata for user:', userId);
+  console.log('📋 ================================');
+  
   const supabase = await createClient();
   
   const { data, error } = await supabase
@@ -17,11 +21,27 @@ export async function getUserMeta(userId: string) {
     .eq('user_id', userId)
     .single();
     
+  console.log('📋 User metadata query result:');
+  console.log('📋 Data:', data);
+  console.log('📋 Error:', error);
+  console.log('📋 Error code:', error?.code);
+    
   if (error && error.code !== 'PGRST116') { // PGRST116 是 "记录不存在" 错误
-    console.error('获取用户元数据错误:', error);
+    console.error('❌ 获取用户元数据错误:', error);
     throw error;
   }
   
+  if (!data) {
+    console.log('⚠️ No user metadata found in database for user:', userId);
+  } else {
+    console.log('✅ User metadata found:');
+    console.log('✅ Plan type:', data.plan_type);
+    console.log('✅ Is paid:', data.is_paid);
+    console.log('✅ Paid at:', data.paid_at);
+    console.log('✅ Username:', data.username);
+  }
+  
+  console.log('📋 ================================');
   return data;
 }
 
@@ -176,6 +196,13 @@ export async function getUsageHistory(userId: string, limit = 10) {
 
 // 获取套餐限制信息
 function getPlanLimits(planType: string) {
+  // 使用新的套餐配置
+  try {
+    const { getPlanLimit } = require('@/lib/planConfig');
+    return { monthlyLimit: getPlanLimit(planType) };
+  } catch (error) {
+    // 回退到硬编码配置（向后兼容）
+    console.warn('Failed to import planConfig, using fallback limits');
   const limits = {
     'free': { monthlyLimit: 0 },
     'starter_monthly': { monthlyLimit: 50 },
@@ -186,6 +213,7 @@ function getPlanLimits(planType: string) {
     'creator_yearly': { monthlyLimit: 500 }
   };
   return limits[planType as keyof typeof limits] || limits['free'];
+  }
 }
 
 // 获取当月使用情况 - 基于用户账单周期（30天）而非自然月

@@ -11,16 +11,18 @@ export interface Database {
     Tables: {
       user_meta: {
         Row: {
+          id: string
           user_id: string
-          username: string | null
-          avatar_url: string | null
+          username?: string | null
+          avatar_url?: string | null
           is_paid: boolean
-          paid_at: string | null
+          paid_at?: string | null
           plan_type: string
           created_at: string
           updated_at: string
         }
         Insert: {
+          id?: string
           user_id: string
           username?: string | null
           avatar_url?: string | null
@@ -31,6 +33,7 @@ export interface Database {
           updated_at?: string
         }
         Update: {
+          id?: string
           user_id?: string
           username?: string | null
           avatar_url?: string | null
@@ -43,25 +46,69 @@ export interface Database {
       }
       user_usage: {
         Row: {
-          id: number
+          id: string
           user_id: string
           date: string
           generation_count: number
           created_at: string
+          updated_at?: string | null
         }
         Insert: {
-          id?: number
+          id?: string
           user_id: string
           date: string
-          generation_count: number
+          generation_count?: number
           created_at?: string
+          updated_at?: string | null
         }
         Update: {
-          id?: number
+          id?: string
           user_id?: string
           date?: string
           generation_count?: number
           created_at?: string
+          updated_at?: string | null
+        }
+      }
+      payment_events: {
+        Row: {
+          id: string
+          event_id: string
+          event_type: string
+          user_id: string | null
+          plan_type: string | null
+          creem_customer_id: string | null
+          creem_order_id: string | null
+          amount: number | null
+          currency: string
+          processed_at: string
+          metadata: Record<string, any>
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          event_type: string
+          user_id?: string | null
+          plan_type?: string | null
+          creem_customer_id?: string | null
+          creem_order_id?: string | null
+          amount?: number | null
+          currency?: string
+          processed_at?: string
+          metadata?: Record<string, any>
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          event_type?: string
+          user_id?: string | null
+          plan_type?: string | null
+          creem_customer_id?: string | null
+          creem_order_id?: string | null
+          amount?: number | null
+          currency?: string
+          processed_at?: string
+          metadata?: Record<string, any>
         }
       }
     }
