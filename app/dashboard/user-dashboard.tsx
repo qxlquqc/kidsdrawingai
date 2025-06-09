@@ -29,6 +29,7 @@ export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage
   const { signOut } = useUser()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false)
 
   // 用户信息显示格式化
   const username = userMeta.username || user.email?.split('@')[0] || 'User'
@@ -135,6 +136,95 @@ export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage
     return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  // 处理管理订阅
+  const handleManageSubscription = async () => {
+    console.log('🎛️ ================================');
+    console.log('🎛️ Manage Subscription button clicked');
+    console.log('🎛️ User ID:', user.id);
+    console.log('🎛️ User email:', user.email);
+    console.log('🎛️ Plan type:', userMeta.plan_type);
+    console.log('🎛️ Is paid:', userMeta.is_paid);
+    console.log('🎛️ Timestamp:', new Date().toISOString());
+    console.log('🎛️ ================================');
+
+    setIsManagingSubscription(true);
+
+    try {
+      // 调用Customer Portal API
+      console.log('🛒 Calling Customer Portal API...');
+      const response = await fetch('/api/creem/customer-portal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📡 Customer Portal API response status:', response.status);
+      
+      const data = await response.json();
+      console.log('📡 Customer Portal API response data:', data);
+
+      if (!response.ok) {
+        console.error('❌ Customer Portal API failed:', data);
+        
+        // 特殊处理测试用户
+        if (data.is_test_user) {
+          toast.error("Billing portal is not available for test accounts. This feature works with real subscriptions.", {
+            duration: 6000,
+            action: {
+              label: 'Learn More',
+              onClick: () => window.open('https://docs.creem.io/learn/customers/customer-portal', '_blank')
+            }
+          });
+          return;
+        }
+        
+        // 处理其他错误
+        throw new Error(data.error || 'Failed to access billing portal');
+      }
+
+      // 重定向到Customer Portal
+      if (data.customer_portal_link) {
+        console.log('🔗 Redirecting to Customer Portal:', data.customer_portal_link);
+        toast.success("Opening billing portal...", { duration: 3000 });
+        
+        // 在新窗口打开，避免用户失去当前页面
+        const newWindow = window.open(data.customer_portal_link, '_blank');
+        
+        // 检查弹窗是否被阻止
+        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+          toast.error("Pop-up blocked. Please allow pop-ups for this site or copy the link manually.", {
+            duration: 8000,
+            action: {
+              label: 'Copy Link',
+              onClick: () => {
+                navigator.clipboard.writeText(data.customer_portal_link);
+                toast.success("Link copied to clipboard!");
+              }
+            }
+          });
+        }
+      } else {
+        console.error('❌ No customer portal link in response:', data);
+        throw new Error('No billing portal link received');
+      }
+
+    } catch (error) {
+      console.error('💥 Manage subscription error:', error);
+      
+      if (error instanceof Error && error.message.includes('customer portal not available')) {
+        // 已经在上面处理了测试用户的情况
+        return;
+      }
+      
+      toast.error(error instanceof Error ? error.message : "Failed to access billing portal. Please try again or contact support.", {
+        duration: 6000
+      });
+    } finally {
+      setIsManagingSubscription(false);
+    }
+  };
+
   return (
     <div className="container max-w-6xl mx-auto px-4 py-12">
       <div className="flex flex-col md:flex-row gap-8">
@@ -187,14 +277,32 @@ export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage
                 </span>
               </div>
               
-              {!userMeta.is_paid && (
+              <div className="flex gap-2">
+                {!userMeta.is_paid ? (
                 <Link 
                   href="/pricing" 
                   className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium rounded-lg transition transform hover:scale-105"
                 >
                   Choose Plan
                 </Link>
-              )}
+                ) : (
+                  <>
+                    <button
+                      onClick={handleManageSubscription}
+                      disabled={isManagingSubscription}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium rounded-lg transition transform hover:scale-105 disabled:transform-none"
+                    >
+                      {isManagingSubscription ? 'Loading...' : 'Manage Subscription'}
+                    </button>
+                    <Link 
+                      href="/pricing" 
+                      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white font-medium rounded-lg transition transform hover:scale-105"
+                    >
+                      Upgrade Plan
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           

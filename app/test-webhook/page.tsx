@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function TestWebhookPage() {
   const [testResult, setTestResult] = useState<string>("");
   const [generatedLinks, setGeneratedLinks] = useState<Record<string, string>>({});
+  const [portalTestResult, setPortalTestResult] = useState<string>("");
+  const [isTestingPortal, setIsTestingPortal] = useState<boolean>(false);
   
   // 测试产品ID映射
   const testProductMapping = () => {
@@ -83,6 +85,20 @@ export default function TestWebhookPage() {
     });
     
     setTestResult(`Tested ${testDomains.length} alternative domains. Check console for URLs.`);
+  };
+
+  const testCustomerPortal = async () => {
+    setIsTestingPortal(true);
+    try {
+      const response = await fetch('/api/test-customer-portal');
+      const data = await response.json();
+      setPortalTestResult(JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Error testing customer portal:', error);
+      setPortalTestResult('Error testing customer portal. Please check the console for details.');
+    } finally {
+      setIsTestingPortal(false);
+    }
   };
 
   return (
@@ -171,6 +187,36 @@ export default function TestWebhookPage() {
               </CardContent>
             </Card>
           )}
+          
+          {/* Customer Portal Test */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Customer Portal Test</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-600">
+                <p>Test the Customer Portal API for managing subscriptions.</p>
+                <p><strong>Note:</strong> This will only work for users with real payment events that contain customer IDs.</p>
+              </div>
+              
+              <Button 
+                onClick={testCustomerPortal} 
+                disabled={isTestingPortal}
+                className="w-full"
+              >
+                {isTestingPortal ? 'Testing...' : 'Test Customer Portal API'}
+              </Button>
+              
+              {portalTestResult && (
+                <div className="mt-4">
+                  <h4 className="font-semibold text-sm mb-2">Customer Portal Test Result:</h4>
+                  <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-32">
+                    {portalTestResult}
+                  </pre>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

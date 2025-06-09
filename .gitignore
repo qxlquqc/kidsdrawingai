@@ -39,6 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# 测试和调试文件
+**/test-*.js
+**/test-*.ts
+**/debug-*.js  
+**/debug-*.ts
+app/api/test-*/
+app/api/debug-*/
 .env.local 
 开发.txt
 开发总.txt 

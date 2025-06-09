@@ -131,12 +131,12 @@ export async function POST(request: NextRequest) {
          result = await handleSubscriptionPaid(event);
          break;
        case 'subscription.canceled':
-         console.log('❌ Processing subscription.canceled event');
-         result = await handleSubscriptionEnded(event);
+         console.log('⚠️ Processing subscription.canceled event');
+         result = await handleSubscriptionCanceled(event);
          break;
        case 'subscription.expired':
          console.log('⏰ Processing subscription.expired event');
-         result = await handleSubscriptionEnded(event);
+         result = await handleSubscriptionExpired(event);
          break;
        case 'subscription.trialing':
          console.log('🔄 Processing subscription.trialing event');
@@ -184,8 +184,13 @@ async function handleWebhookEvent(event: CreemWebhookEvent) {
       return await handleSubscriptionPaid(event);
     
     case 'subscription.canceled':
+      return await handleSubscriptionCanceled(event);
+    
     case 'subscription.expired':
-      return await handleSubscriptionEnded(event);
+      return await handleSubscriptionExpired(event);
+    
+    case 'refund.created':
+      return await handleRefundCreated(event);
     
     default:
       console.log('⚠️ Unhandled event type:', event.eventType);
@@ -416,18 +421,21 @@ async function handleSubscriptionPaid(event: CreemWebhookEvent) {
 /**
  * 处理订阅取消/过期事件
  */
-async function handleSubscriptionEnded(event: CreemWebhookEvent) {
-  console.log('❌ ================================');
-  console.log('❌ Processing subscription end event');
-  console.log('❌ Event Type:', event.eventType);
-  console.log('❌ Event ID:', event.id);
-  console.log('❌ ================================');
+/**
+ * 处理订阅取消事件 - 用户取消订阅但继续享受服务直到期结束
+ */
+async function handleSubscriptionCanceled(event: CreemWebhookEvent) {
+  console.log('⚠️ ================================');
+  console.log('⚠️ Processing subscription.canceled event');
+  console.log('⚠️ Event ID:', event.id);
+  console.log('⚠️ Note: User canceled but keeps access until period ends');
+  console.log('⚠️ ================================');
   
   const subscription = event.object;
   const metadata = subscription.metadata || {};
   const userId = metadata.internal_user_id;
   
-  console.log('📋 Subscription details:');
+  console.log('📋 Subscription cancellation details:');
   console.log('📋 Subscription ID:', subscription.id);
   console.log('📋 Product ID:', subscription.product);
   console.log('📋 Customer ID:', subscription.customer);
@@ -443,8 +451,62 @@ async function handleSubscriptionEnded(event: CreemWebhookEvent) {
     return { status: 'error', message: 'Missing user_id' };
   }
   
-  // 降级到免费套餐
-  console.log('⬇️ Downgrading user to free plan...');
+  // 获取当前计划类型
+  const planType = getplanTypeFromProductId(subscription.product);
+  
+  // 订阅取消时，不立即降级，而是标记为将要取消
+  // 用户继续享受付费服务直到当前计费周期结束
+  console.log('📝 Marking subscription as canceled but keeping current access...');
+  
+  // 可以添加一个字段来标记订阅将在某个日期失效
+  // 但这里我们保持简单，不立即更改用户状态
+  // 真正的降级会在 subscription.expired 事件中处理
+  
+  console.log('📝 Recording subscription cancellation event...');
+  await recordPaymentEvent(event, userId, planType || undefined);
+  
+  console.log('✅ ================================');
+  console.log('✅ Subscription cancellation processed');
+  console.log('✅ User ID:', userId);
+  console.log('✅ Action: marked as canceled (access continues until period end)');
+  console.log('✅ Current period end:', subscription.current_period_end_date);
+  console.log('✅ ================================');
+  
+  return { status: 'success', userId, action: 'canceled_but_active' };
+}
+
+/**
+ * 处理订阅到期事件 - 订阅真正结束，降级到免费套餐
+ */
+async function handleSubscriptionExpired(event: CreemWebhookEvent) {
+  console.log('⏰ ================================');
+  console.log('⏰ Processing subscription.expired event');
+  console.log('⏰ Event ID:', event.id);
+  console.log('⏰ Note: Subscription expired, downgrading to free');
+  console.log('⏰ ================================');
+  
+  const subscription = event.object;
+  const metadata = subscription.metadata || {};
+  const userId = metadata.internal_user_id;
+  
+  console.log('📋 Subscription expiration details:');
+  console.log('📋 Subscription ID:', subscription.id);
+  console.log('📋 Product ID:', subscription.product);
+  console.log('📋 Customer ID:', subscription.customer);
+  console.log('📋 Status:', subscription.status);
+  console.log('📋 Current period end:', subscription.current_period_end_date);
+  console.log('📋 Metadata:', metadata);
+  console.log('📋 User ID from metadata:', userId);
+  
+  if (!userId) {
+    console.error('❌ No user_id in subscription metadata');
+    console.error('❌ Available metadata keys:', Object.keys(metadata));
+    await recordPaymentEvent(event);
+    return { status: 'error', message: 'Missing user_id' };
+  }
+  
+  // 订阅到期，降级到免费套餐
+  console.log('⬇️ Downgrading user to free plan due to expiration...');
   const { error: updateError } = await supabase
     .from('user_meta')
     .update({
@@ -455,22 +517,22 @@ async function handleSubscriptionEnded(event: CreemWebhookEvent) {
     .eq('user_id', userId);
   
   if (updateError) {
-    console.error('❌ Failed to downgrade user:', updateError);
+    console.error('❌ Failed to downgrade expired user:', updateError);
     console.error('❌ Update error details:', JSON.stringify(updateError, null, 2));
   } else {
-    console.log('✅ User downgraded to free plan');
+    console.log('✅ User downgraded to free plan due to expiration');
   }
   
-  console.log('📝 Recording subscription end event...');
+  console.log('📝 Recording subscription expiration event...');
   await recordPaymentEvent(event, userId, 'free');
   
   console.log('✅ ================================');
-  console.log('✅ Subscription end processed successfully');
+  console.log('✅ Subscription expiration processed successfully');
   console.log('✅ User ID:', userId);
-  console.log('✅ Action: downgraded to free');
+  console.log('✅ Action: downgraded to free due to expiration');
   console.log('✅ ================================');
   
-  return { status: 'success', userId, action: 'downgraded' };
+  return { status: 'success', userId, action: 'expired_and_downgraded' };
 }
 
 /**
@@ -496,15 +558,16 @@ async function recordPaymentEvent(
   console.log('📝 ================================');
   
   const eventData = {
-    event_id: event.id,
-    event_type: event.eventType,
-    user_id: userId || null,
-    plan_type: planType || null,
-    creem_customer_id: additionalData?.creem_customer_id || null,
-    creem_order_id: additionalData?.creem_order_id || null,
-    amount: additionalData?.amount || null,
-    currency: 'usd',
-    metadata: event.object
+      event_id: event.id,
+      event_type: event.eventType,
+      user_id: userId || null,
+      plan_type: planType || null,
+      creem_customer_id: additionalData?.creem_customer_id || null,
+      creem_order_id: additionalData?.creem_order_id || null,
+      amount: additionalData?.amount || null,
+      currency: 'usd',
+    processed_at: new Date().toISOString(), // 明确设置时间戳
+      metadata: event.object
   };
   
   console.log('📝 Inserting event data:', JSON.stringify(eventData, null, 2));
@@ -674,27 +737,190 @@ async function handleRefundCreated(event: CreemWebhookEvent) {
   console.log('💸 ================================');
   console.log('💸 Processing refund.created event');
   console.log('💸 Event ID:', event.id);
+  console.log('💸 RAW EVENT OBJECT:', JSON.stringify(event, null, 2));
   console.log('💸 ================================');
   
   const refund = event.object;
-  const metadata = refund.metadata || {};
-  const userId = metadata.internal_user_id;
+  console.log('💸 REFUND OBJECT TYPE:', typeof refund);
+  console.log('💸 REFUND OBJECT KEYS:', Object.keys(refund || {}));
+  console.log('💸 FULL REFUND OBJECT:', JSON.stringify(refund, null, 2));
   
-  console.log('📋 Refund details:');
+  // 检查各种可能的metadata位置
+  console.log('💸 METADATA ANALYSIS:');
+  console.log('💸 refund.metadata:', refund.metadata);
+  console.log('💸 refund.metadata type:', typeof refund.metadata);
+  console.log('💸 refund.metadata keys:', Object.keys(refund.metadata || {}));
+  
+  const metadata = refund.metadata || {};
+  console.log('💸 EXTRACTED METADATA:', JSON.stringify(metadata, null, 2));
+  
+  // 尝试从多个位置获取 user_id
+  let userId = null;
+  
+  // 方法1: 从 refund.checkout.metadata.internal_user_id 获取（真实Creem格式）
+  if (refund.checkout?.metadata?.internal_user_id) {
+    userId = refund.checkout.metadata.internal_user_id;
+    console.log('💸 USER_ID SOURCE: refund.checkout.metadata.internal_user_id =', userId);
+  }
+  
+  // 方法2: 从 refund.subscription.metadata.internal_user_id 获取（真实Creem格式）
+  if (!userId && refund.subscription?.metadata?.internal_user_id) {
+    userId = refund.subscription.metadata.internal_user_id;
+    console.log('💸 USER_ID SOURCE: refund.subscription.metadata.internal_user_id =', userId);
+  }
+  
+  // 方法3: 从 refund.metadata.internal_user_id 获取（测试脚本格式）
+  if (!userId && metadata.internal_user_id) {
+    userId = metadata.internal_user_id;
+    console.log('💸 USER_ID SOURCE: refund.metadata.internal_user_id =', userId);
+  }
+  
+  // 方法4: 从 refund.metadata.user_id 获取
+  if (!userId && metadata.user_id) {
+    userId = metadata.user_id;
+    console.log('💸 USER_ID SOURCE: refund.metadata.user_id =', userId);
+  }
+  
+  // 方法5: 检查是否有其他可能的user_id字段
+  if (!userId) {
+    console.log('💸 SEARCHING FOR USER_ID IN ALL POSSIBLE LOCATIONS:');
+    console.log('💸 refund.checkout:', refund.checkout);
+    console.log('💸 refund.subscription:', refund.subscription);
+    console.log('💸 refund.metadata:', metadata);
+    
+    // 检查所有metadata位置
+    [
+      refund.checkout?.metadata,
+      refund.subscription?.metadata,
+      metadata
+    ].forEach((meta, index) => {
+      if (meta) {
+        const sources = ['checkout.metadata', 'subscription.metadata', 'refund.metadata'];
+        console.log(`💸 Checking ${sources[index]}:`);
+        Object.entries(meta).forEach(([key, value]) => {
+          console.log(`💸   ${key}: ${value}`);
+          if (key.toLowerCase().includes('user') || key.toLowerCase().includes('id')) {
+            console.log(`💸   ^^^^ POTENTIAL USER_ID FIELD: ${key} = ${value}`);
+          }
+        });
+      }
+    });
+  }
+  
+  // 方法6: 尝试通过order_id查找原始订单的user_id
+  const orderId = refund.order?.id || refund.order_id;
+  console.log('💸 ================================');
+  console.log('💸 ORDER ID ANALYSIS:');
+  console.log('💸 refund.order?.id:', refund.order?.id);
+  console.log('💸 refund.order_id:', refund.order_id);
+  console.log('💸 Final orderId:', orderId);
+  console.log('💸 orderId type:', typeof orderId);
+  console.log('💸 orderId is truthy:', !!orderId);
+  console.log('💸 ================================');
+  
+  if (!userId && orderId) {
+    console.log('💸 ATTEMPTING TO FIND USER_ID BY ORDER_ID:', orderId);
+    
+    // 先查看payment_events表中所有记录，了解数据结构
+    const { data: allEvents, error: allError } = await supabase
+      .from('payment_events')
+      .select('event_id, event_type, user_id, creem_order_id, plan_type, processed_at')
+      .order('processed_at', { ascending: false })
+      .limit(10);
+    
+    console.log('💸 ================================');
+    console.log('💸 RECENT PAYMENT_EVENTS RECORDS (for reference):');
+    console.log('💸 Query error:', allError);
+    console.log('💸 Recent events:', JSON.stringify(allEvents, null, 2));
+    console.log('💸 ================================');
+    
+    // 查找支付事件表中的相关记录
+    console.log('💸 SEARCHING FOR MATCHING ORDERS...');
+    console.log('💸 Search criteria: creem_order_id =', orderId);
+    
+    const { data: relatedEvents, error: queryError } = await supabase
+      .from('payment_events')
+      .select('user_id, plan_type, event_type, metadata, creem_order_id, event_id')
+      .eq('creem_order_id', orderId)
+      .not('user_id', 'is', null);
+    
+    console.log('💸 RELATED PAYMENT EVENTS QUERY RESULT:');
+    console.log('💸   error:', queryError);
+    console.log('💸   data count:', relatedEvents?.length || 0);
+    console.log('💸   data:', JSON.stringify(relatedEvents, null, 2));
+    
+    if (relatedEvents && relatedEvents.length > 0) {
+      userId = relatedEvents[0].user_id;
+      console.log('💸 ✅ USER_ID FOUND FROM RELATED ORDER:', userId);
+    } else {
+      console.log('💸 ❌ NO MATCHING ORDERS FOUND');
+      
+      // 尝试更宽松的查询 - 查找所有包含这个order_id的记录
+      console.log('💸 TRYING BROADER SEARCH...');
+      const { data: broadSearch, error: broadError } = await supabase
+        .from('payment_events')
+        .select('user_id, plan_type, event_type, metadata, creem_order_id, event_id')
+        .not('user_id', 'is', null);
+      
+      console.log('💸 BROAD SEARCH RESULTS:');
+      console.log('💸   error:', broadError);
+      console.log('💸   total records:', broadSearch?.length || 0);
+      
+      // 检查是否有任何包含这个order_id的记录
+      const matchingRecords = broadSearch?.filter(record => {
+        console.log(`💸   Checking record: creem_order_id=${record.creem_order_id}, looking for=${orderId}`);
+        return record.creem_order_id === orderId;
+      });
+      
+      console.log('💸   Matching records found:', matchingRecords?.length || 0);
+      console.log('💸   Matching records:', JSON.stringify(matchingRecords, null, 2));
+    }
+    
+    console.log('💸 ================================');
+  } else {
+    console.log('💸 SKIPPING ORDER_ID LOOKUP:');
+    console.log('💸   userId already found:', !!userId);
+    console.log('💸   orderId available:', !!orderId);
+    console.log('💸 ================================');
+  }
+  
+  console.log('💸 ================================');
+  console.log('💸 FINAL USER_ID RESOLUTION:');
+  console.log('💸 User ID:', userId);
+  console.log('💸 User ID type:', typeof userId);
+  console.log('💸 User ID is truthy:', !!userId);
+  console.log('💸 ================================');
+  
+  console.log('📋 Refund details FINAL:');
   console.log('📋 Refund ID:', refund.id);
-  console.log('📋 Order ID:', refund.order_id);
+  console.log('📋 Order ID (refund.order?.id):', refund.order?.id);
+  console.log('📋 Order ID (refund.order_id):', refund.order_id);
+  console.log('📋 Final Order ID used:', orderId);
+  console.log('📋 Refund Amount:', refund.refund_amount);
   console.log('📋 Amount:', refund.amount);
   console.log('📋 Status:', refund.status);
-  console.log('📋 User ID from metadata:', userId);
+  console.log('📋 User ID from analysis:', userId);
   
   if (!userId) {
-    console.error('❌ No user_id in refund metadata');
+    console.error('❌ ================================');
+    console.error('❌ NO USER_ID FOUND IN REFUND EVENT');
+    console.error('❌ All metadata keys:', Object.keys(metadata));
+    console.error('❌ Metadata values:', JSON.stringify(metadata, null, 2));
+    console.error('❌ Refund order_id (refund.order?.id):', refund.order?.id);
+    console.error('❌ Refund order_id (refund.order_id):', refund.order_id);
+    console.error('❌ Recording event with null user_id...');
+    console.error('❌ ================================');
+    
     await recordPaymentEvent(event);
     return { status: 'error', message: 'Missing user_id' };
   }
   
   // 退款时降级到免费套餐
-  console.log('⬇️ Downgrading user due to refund...');
+  console.log('⬇️ ================================');
+  console.log('⬇️ DOWNGRADING USER DUE TO REFUND');
+  console.log('⬇️ Target user_id:', userId);
+  console.log('⬇️ ================================');
+  
   const { error: updateError } = await supabase
     .from('user_meta')
     .update({
@@ -706,17 +932,33 @@ async function handleRefundCreated(event: CreemWebhookEvent) {
     .eq('user_id', userId);
   
   if (updateError) {
-    console.error('❌ Failed to downgrade user after refund:', updateError);
+    console.error('❌ ================================');
+    console.error('❌ FAILED TO DOWNGRADE USER AFTER REFUND');
+    console.error('❌ Error details:', JSON.stringify(updateError, null, 2));
+    console.error('❌ User ID used:', userId);
+    console.error('❌ ================================');
   } else {
-    console.log('✅ User downgraded after refund');
+    console.log('✅ ================================');
+    console.log('✅ USER DOWNGRADED AFTER REFUND');
+    console.log('✅ User ID:', userId);
+    console.log('✅ New plan_type: free');
+    console.log('✅ New is_paid: false');
+    console.log('✅ ================================');
   }
   
+  console.log('📝 RECORDING REFUND PAYMENT EVENT...');
   await recordPaymentEvent(event, userId, 'free', {
-    amount: refund.amount,
-    creem_order_id: refund.order_id
+    amount: refund.refund_amount || refund.amount,
+    creem_order_id: orderId
   });
   
-  console.log('✅ Refund processed successfully');
+  console.log('✅ ================================');
+  console.log('✅ REFUND PROCESSED SUCCESSFULLY');
+  console.log('✅ Event ID:', event.id);
+  console.log('✅ User ID:', userId);
+  console.log('✅ Action: refunded and downgraded');
+  console.log('✅ ================================');
+  
   return { status: 'success', userId, action: 'refunded' };
 }
 

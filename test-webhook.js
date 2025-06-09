@@ -5,6 +5,10 @@ const WEBHOOK_URL = 'http://localhost:3002/api/webhooks/creem';
 const WEBHOOK_SECRET = 'whsec_1f6U2zy4RERfhnfoI5ovJa';
 const USER_ID = 'a245e0e0-9228-4854-8342-8e86a9aaa4b7'; // 替换为实际的用户ID
 
+// 固定的测试ID，用于建立关联关系
+const FIXED_ORDER_ID = 'ord_test_fixed_for_refund_1749394000000';
+const FIXED_CUSTOMER_ID = 'cust_test_fixed_for_refund_1749394000000';
+
 /**
  * ✅ 更新后的测试脚本 - 完全模拟真实Creem webhook格式
  * 
@@ -25,6 +29,44 @@ const USER_ID = 'a245e0e0-9228-4854-8342-8e86a9aaa4b7'; // 替换为实际的用
 
 // 模拟 Creem webhook 事件 - 支持所有8种事件类型
 const mockEvents = {
+  // 为手动退款测试准备基础数据 - 创建一个checkout事件
+  checkout_completed_for_refund_test: {
+    id: "evt_checkout_for_refund_" + Date.now(),
+    eventType: "checkout.completed",
+    created_at: Date.now(),
+    object: {
+      id: "ch_for_refund_test_" + Date.now(),
+      object: "checkout",
+      mode: "test",
+      status: "complete",
+      order: {
+        id: FIXED_ORDER_ID,  // 使用固定的order_id
+        mode: "test",
+        type: "one-time",
+        amount: 999,
+        object: "order",
+        status: "paid",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        currency: "USD",
+        customer: FIXED_CUSTOMER_ID
+      },
+      customer: {
+        id: FIXED_CUSTOMER_ID,
+        mode: "test",
+        name: "Test User for Refund",
+        email: "107060023@qq.com", 
+        object: "customer",
+        country: "US",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      metadata: {
+        internal_user_id: USER_ID,
+        plan_type: "creator_monthly"
+      },
+      created_at: Date.now()
+    }
+  },
   checkout_completed: {
     id: "evt_test_checkout_" + Date.now(),
     eventType: "checkout.completed",
@@ -216,6 +258,8 @@ const mockEvents = {
     }
   },
 
+  // 订阅取消事件 - 用户取消订阅，但继续享受服务直到期结束
+  // 重要：用户状态不应该立即降级为free，应该保持付费状态直到current_period_end_date
   subscription_canceled: {
     id: "evt_test_sub_canceled_" + Date.now(),
     eventType: "subscription.canceled",
@@ -227,7 +271,7 @@ const mockEvents = {
       customer: "cust_test_" + Date.now(),
       collection_method: "charge_automatically",
       status: "canceled",
-      current_period_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      current_period_end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 还有30天有效期
       canceled_at: new Date().toISOString(),
       metadata: {
         internal_user_id: USER_ID,
@@ -239,6 +283,8 @@ const mockEvents = {
     }
   },
 
+  // 订阅过期事件 - 订阅真正结束，此时才应该降级为free
+  // 重要：只有这个事件应该将用户状态改为free
   subscription_expired: {
     id: "evt_test_sub_expired_" + Date.now(),
     eventType: "subscription.expired",
@@ -250,7 +296,7 @@ const mockEvents = {
       customer: "cust_test_" + Date.now(),
       collection_method: "charge_automatically",
       status: "expired",
-      current_period_end_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 昨天过期
+      current_period_end_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 昨天过期，现在失效
       metadata: {
         internal_user_id: USER_ID,
         username: "107060023",
@@ -261,6 +307,7 @@ const mockEvents = {
     }
   },
 
+  // 模拟终端测试退款 - 包含完整metadata结构
   refund_created: {
     id: "evt_test_refund_" + Date.now(),
     eventType: "refund.created",
@@ -268,16 +315,121 @@ const mockEvents = {
     object: {
       id: "ref_test_" + Date.now(),
       object: "refund",
-      order_id: "ord_test_" + Date.now(),
-      amount: 999,
-      currency: "usd",
+      reason: "duplicate",
       status: "succeeded",
-      metadata: {
-        internal_user_id: USER_ID,
-        username: "107060023",
-        plan_type: "starter_monthly",
-        product_id: "prod_26evbPr0Zr5QG2pGpFk4bp"
-      }
+      refund_amount: 300,
+      refund_currency: "USD",
+      order: {
+        id: "ord_test_" + Date.now(),
+        mode: "test",
+        type: "recurring",
+        amount: 999,
+        object: "order",
+        status: "paid",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        currency: "USD",
+        customer: "cust_test_" + Date.now()
+      },
+      checkout: {
+        id: "ch_test_" + Date.now(),
+        mode: "test",
+        units: 1,
+        object: "checkout",
+        status: "completed",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        metadata: {
+          username: "107060023",
+          plan_type: "starter_monthly",
+          internal_user_id: USER_ID
+        },
+        request_id: USER_ID + "-" + Date.now(),
+        success_url: "http://localhost:3002/dashboard"
+      },
+      subscription: {
+        id: "sub_test_" + Date.now(),
+        mode: "test",
+        object: "subscription",
+        status: "active",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        customer: "cust_test_" + Date.now(),
+        metadata: {
+          username: "107060023",
+          plan_type: "starter_monthly", 
+          internal_user_id: USER_ID
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        canceled_at: null,
+        collection_method: "charge_automatically"
+      },
+      customer: {
+        id: "cust_test_" + Date.now(),
+        mode: "test",
+        name: "Test User",
+        email: "107060023@qq.com", 
+        object: "customer",
+        country: "US",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      created_at: Date.now()
+    }
+  },
+
+  // 模拟Creem后台手动退款 - 可能缺少某些metadata信息
+  refund_created_manual: {
+    id: "evt_manual_refund_" + Date.now(),
+    eventType: "refund.created", 
+    created_at: Date.now(),
+    object: {
+      id: "ref_manual_" + Date.now(),
+      object: "refund",
+      reason: "requested_by_customer",
+      status: "succeeded",
+      refund_amount: 300,
+      refund_currency: "USD",
+      order: {
+        id: FIXED_ORDER_ID,  // 使用固定的order_id，这样可以与checkout_completed事件关联
+        mode: "test",
+        type: "recurring", 
+        amount: 999,
+        object: "order",
+        status: "paid",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        currency: "USD",
+        customer: FIXED_CUSTOMER_ID  // 使用固定的customer_id
+      },
+      // 模拟手动退款可能缺少checkout信息
+      checkout: null,
+      // subscription信息可能存在但metadata不完整
+      subscription: {
+        id: "sub_manual_" + Date.now(),
+        mode: "test", 
+        object: "subscription",
+        status: "active",
+        product: "prod_26evbPr0Zr5QG2pGpFk4bp",
+        customer: FIXED_CUSTOMER_ID,
+        metadata: {
+          // 模拟只有部分metadata信息
+          plan_type: "creator_monthly"
+          // 注意：故意缺少 internal_user_id，模拟真实情况
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        canceled_at: null,
+        collection_method: "charge_automatically"
+      },
+      customer: {
+        id: FIXED_CUSTOMER_ID,
+        mode: "test",
+        name: "Manual Refund User",
+        email: "107060023@qq.com",
+        object: "customer", 
+        country: "US",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      created_at: Date.now()
     }
   }
 };
@@ -450,6 +602,9 @@ if (require.main === module) {
     console.log('  node test-webhook.js all             - Test all events');
     console.log('  node test-webhook.js idempotency     - Test idempotency');
     console.log('  node test-webhook.js                 - Test all events (default)');
+    console.log('\n💸 Refund Testing:');
+    console.log('  node test-webhook.js refund_created         - 测试终端退款（完整metadata）');
+    console.log('  node test-webhook.js refund_created_manual  - 测试手动退款（缺少user_id）');
     console.log('\n📋 Available event types:', Object.keys(mockEvents).join(', '));
   } else {
     testAllWebhooks();
