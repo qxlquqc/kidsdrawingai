@@ -22,7 +22,7 @@ export const serverEnv = {
 
 // Creem Payment Configuration
 export const creemEnv = {
-  API_URL: process.env.CREEM_API_URL || 'https://test-api.creem.io/v1',
+  API_URL: process.env.CREEM_API_URL || '',
   API_KEY: process.env.CREEM_API_KEY || '',
   WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET || '',
   SUCCESS_URL: process.env.CREEM_SUCCESS_URL || '',
@@ -90,6 +90,7 @@ export function getReplicateApiToken(): string {
 
 export function validateCreemEnv(): { valid: boolean; missingVars: string[] } {
   const requiredVars = [
+    'CREEM_API_URL',
     'CREEM_API_KEY',
     'CREEM_WEBHOOK_SECRET',
     'CREEM_SUCCESS_URL'

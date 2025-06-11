@@ -42,6 +42,7 @@ next-env.d.ts
 
 # 💾 环境配置文件
 .env.local 
+线上配置.env.local
 
 # 📚 开发文档和笔记（本地保留，不上传）
 开发.txt                      

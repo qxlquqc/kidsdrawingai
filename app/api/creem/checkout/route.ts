@@ -191,17 +191,17 @@ export async function POST(request: NextRequest) {
 
 /**
  * 根据plan_type获取对应的Creem product_id
- * 使用硬编码映射确保与webhook保持一致
+ * 从环境变量读取确保使用线上产品ID
  */
 function getProductIdForPlan(planType: string): string | null {
-  // 直接使用 .env.local 中的产品ID进行映射，与webhook保持一致
+  // 从环境变量读取产品ID，确保使用线上配置
   const PLAN_TO_PRODUCT_MAP: Record<string, string> = {
-    'starter_monthly': 'prod_26evbPr0Zr5QG2pGpFk4bp',
-    'starter_yearly': 'prod_4a4q9p3YvIKMHzNOJPi7Nq',
-    'explorer_monthly': 'prod_7U5RHQv7Y3DCRJIjUpHYys',
-    'explorer_yearly': 'prod_45t1uz4PrLPOoMmWzWibQm',
-    'creator_monthly': 'prod_Nh7ancB1Ers53vaef8cmp',
-    'creator_yearly': 'prod_3RpckwBWoPja9pWZl7EOAc',
+    'starter_monthly': creemEnv.PRODUCTS.STARTER_MONTHLY,
+    'starter_yearly': creemEnv.PRODUCTS.STARTER_YEARLY,
+    'explorer_monthly': creemEnv.PRODUCTS.EXPLORER_MONTHLY,
+    'explorer_yearly': creemEnv.PRODUCTS.EXPLORER_YEARLY,
+    'creator_monthly': creemEnv.PRODUCTS.CREATOR_MONTHLY,
+    'creator_yearly': creemEnv.PRODUCTS.CREATOR_YEARLY,
   };
   
   const productId = PLAN_TO_PRODUCT_MAP[planType];
@@ -209,6 +209,7 @@ function getProductIdForPlan(planType: string): string | null {
   if (!productId) {
     console.error('❌ Unknown plan_type in checkout:', planType);
     console.log('📋 Available plan types:', Object.keys(PLAN_TO_PRODUCT_MAP));
+    console.log('📋 Environment product IDs:', creemEnv.PRODUCTS);
   }
   
   return productId || null;

@@ -586,22 +586,23 @@ async function recordPaymentEvent(
 
 /**
  * 根据Creem product_id映射到我们的plan_type
- * 使用硬编码映射确保在webhook runtime中正常工作
+ * 从环境变量读取确保使用线上产品ID
  */
 function getplanTypeFromProductId(productId: string): PlanType | null {
   console.log('🏷️ ================================');
   console.log('🏷️ Looking up plan type for product ID:', productId);
   
-  // 直接使用 .env.local 中的产品ID进行映射，避免运行时环境变量读取问题
+  // 从环境变量读取产品ID进行映射，确保使用线上配置
   const PRODUCT_MAPPING: Record<string, PlanType> = {
-    'prod_26evbPr0Zr5QG2pGpFk4bp': 'starter_monthly',
-    'prod_4a4q9p3YvIKMHzNOJPi7Nq': 'starter_yearly',
-    'prod_7U5RHQv7Y3DCRJIjUpHYys': 'explorer_monthly',
-    'prod_45t1uz4PrLPOoMmWzWibQm': 'explorer_yearly',
-    'prod_Nh7ancB1Ers53vaef8cmp': 'creator_monthly',
-    'prod_3RpckwBWoPja9pWZl7EOAc': 'creator_yearly',
+    [creemEnv.PRODUCTS.STARTER_MONTHLY]: 'starter_monthly',
+    [creemEnv.PRODUCTS.STARTER_YEARLY]: 'starter_yearly',
+    [creemEnv.PRODUCTS.EXPLORER_MONTHLY]: 'explorer_monthly',
+    [creemEnv.PRODUCTS.EXPLORER_YEARLY]: 'explorer_yearly',
+    [creemEnv.PRODUCTS.CREATOR_MONTHLY]: 'creator_monthly',
+    [creemEnv.PRODUCTS.CREATOR_YEARLY]: 'creator_yearly',
   };
   
+  console.log('🏷️ Environment product IDs:', creemEnv.PRODUCTS);
   console.log('🏷️ Available product mappings:');
   Object.entries(PRODUCT_MAPPING).forEach(([pid, plan]) => {
     console.log(`🏷️   ${pid} -> ${plan}`);
@@ -614,6 +615,7 @@ function getplanTypeFromProductId(productId: string): PlanType | null {
     console.error('❌ ================================');
     console.error('❌ Unknown product_id in webhook:', productId);
     console.error('❌ Available mappings:', Object.keys(PRODUCT_MAPPING));
+    console.error('❌ Environment variables check:', creemEnv.PRODUCTS);
     console.error('❌ ================================');
   } else {
     console.log('✅ Product ID mapped successfully:', mappedPlan);
