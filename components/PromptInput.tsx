@@ -40,7 +40,7 @@ export default function PromptInput({ onChange, disabled = false }: PromptInputP
           disabled={disabled}
           maxLength={500}
           rows={3}
-          placeholder={`Describe what you've drawn (recommend).\nFor example: "Rocket being launched, blue sky and white clouds"`}
+          placeholder={`Describe what you've drawn (optional).\nFor example: "Rocket being launched, blue sky and white clouds"`}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />

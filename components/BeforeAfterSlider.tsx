@@ -76,7 +76,7 @@ export default function BeforeAfterSlider({
   return (
     <div 
       ref={containerRef}
-      className="relative w-full aspect-square rounded-lg overflow-hidden"
+      className="relative w-full aspect-square rounded-lg overflow-hidden min-h-[280px] md:min-h-0"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={() => setIsHovering(true)}
@@ -90,9 +90,10 @@ export default function BeforeAfterSlider({
           src={afterImage}
           alt={afterAlt}
           fill
-          sizes="(max-width: 768px) 100vw, 50vw"
+          sizes="(max-width: 640px) 90vw, (max-width: 768px) 80vw, (max-width: 1024px) 60vw, 50vw"
           className="object-cover"
           priority
+          quality={90}
         />
         
         {/* Top image (original drawing) - clipped based on slider position */}
@@ -106,9 +107,10 @@ export default function BeforeAfterSlider({
             src={beforeImage}
             alt={beforeAlt}
             fill
-            sizes="(max-width: 768px) 100vw, 50vw"
+            sizes="(max-width: 640px) 90vw, (max-width: 768px) 80vw, (max-width: 1024px) 60vw, 50vw"
             className="object-cover"
             priority
+            quality={90}
           />
         </div>
       </div>
@@ -123,22 +125,22 @@ export default function BeforeAfterSlider({
         }}
       >
         <div 
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center z-20"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center z-20"
           style={{
             background: 'linear-gradient(135deg, #ff80ab, #7c4dff)',
             boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
             border: '2px solid white',
           }}
         >
-          <span className="text-white font-bold text-lg">↔</span>
+          <span className="text-white font-bold text-sm md:text-lg">↔</span>
         </div>
       </div>
 
       {/* Labels */}
-      <div className="absolute left-2 top-2 bg-white/70 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-gray-700 z-10">
+      <div className="absolute left-2 top-2 bg-white/70 backdrop-blur-sm px-2 md:px-3 py-1 rounded-full text-xs font-medium text-gray-700 z-10">
         {beforeAlt}
       </div>
-      <div className="absolute right-2 top-2 bg-gradient-to-r from-[#ff80ab]/70 to-[#7c4dff]/70 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-medium text-white z-10">
+      <div className="absolute right-2 top-2 bg-gradient-to-r from-[#ff80ab]/70 to-[#7c4dff]/70 backdrop-blur-sm px-2 md:px-3 py-1 rounded-full text-xs font-medium text-white z-10">
         {afterAlt}
       </div>
     </div>

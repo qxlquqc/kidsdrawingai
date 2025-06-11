@@ -173,8 +173,10 @@ export default function UploadPanel({ onImageUploaded, supabaseClient }: UploadP
               alt="Preview"
               className="rounded-lg object-contain w-full h-full"
               fill
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 80vw, (max-width: 1024px) 50vw, 384px"
               style={{ objectFit: 'contain' }}
               priority
+              quality={85}
             />
             {isUploading && (
               <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center">

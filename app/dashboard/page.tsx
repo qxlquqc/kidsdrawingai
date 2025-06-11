@@ -6,7 +6,6 @@ import { getUserMeta, getCurrentMonthUsage, getTotalUsage, getUsageHistory } fro
 export default async function DashboardPage() {
   console.log('🏠 ================================');
   console.log('🏠 Dashboard page accessed');
-  console.log('🏠 Timestamp:', new Date().toISOString());
   console.log('🏠 ================================');
   
   const supabase = await createClient()

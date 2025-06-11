@@ -64,13 +64,13 @@ export async function uploadToSupabase({
   // 完整的存储路径
   const fullPath = path ? `${path}/${fileName}` : fileName
   
-  console.log(`Uploading file: ${fileName} to ${bucketName}/${path}`)
+
 
   // 带重试的上传函数
   let lastError: Error | null = null
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      console.log(`Upload attempt ${attempt}/${MAX_RETRIES}`)
+
       
       // 带超时的上传请求
       const { error, data } = await fetchWithTimeout(
@@ -84,7 +84,7 @@ export async function uploadToSupabase({
         throw error
       }
       
-      console.log('Upload successful:', data?.path)
+      
       
       // 获取文件的公开URL
       const { data: { publicUrl } } = supabaseClient.storage
@@ -99,7 +99,7 @@ export async function uploadToSupabase({
       if (attempt < MAX_RETRIES) {
         // 使用指数退避延迟
         const delay = RETRY_DELAY * Math.pow(2, attempt - 1)
-        console.log(`Retrying in ${delay}ms...`)
+
         await new Promise(resolve => setTimeout(resolve, delay))
       }
     }

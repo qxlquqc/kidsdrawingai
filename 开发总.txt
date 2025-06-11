@@ -1,0 +1,215 @@
+kidsdrawingai.com
+https://github.com/qxlquqc/kidsdrawingai
+
+我需要仿照@https://drawingsalive.com/ 做一个类似的网站，请仔细查看调研，需要在基础上做优化（比如布局更清爽、颜色更好看、文案更有吸引力等等，可以做出更多加分项设计），我需要你完成这个网站所有代码的编写，考虑到我是一名编程小白，为避免出现代码混乱，bug不好修复，分步进行  注意：只是模仿，文案不能照抄，需在对标基础上优化，数字方面比对标更高
+只需要实现对标网站transform图片功能，不需要实现也不需要展示进一步的功能：
+图生视频和3D models app，同时注意避开这些文案
+
+网站定位：儿童草图 → AI 图像转换
+面向儿童和家长的 AI 工具，主要面向有 3-12 岁孩子的家庭 能够将孩子的手绘图画转化为生动的数字艺术作品。目标是激发儿童的创造力，并为家庭带来互动乐趣。
+结合 AI 与儿童艺术教育，提供娱乐与教育兼具的产品，填补家庭互动与儿童创意表达的市场空白。
+主标题：Turn Kids’ Drawings into Magical Creations
+副标题：Bring their imagination to life with the power of AI — just upload their drawing and watch the magic happen.
+
+请在每次进行Supabase相关设置时，自动同步详细记录到 supabase-setup-log.md 日志文件中，包括时间,增删修改项,描述,表结构,字段名,数据类型,Policy RLS以及实际作用。方便追溯
+在前端后端全部关键位置打上 console.log，方便找出问题点
+保持强制本地端口且只能是PORT=3002
+页面样式需要更具有科技感和AI智能感，让人眼前一亮，惊艳的感觉
+图片区域占位符占位
+生成所有命名风格采用 transform，而不是 generator
+本网站是需要登录付费后才能使用，没有免费试用
+生图过程比较长，生成页面需要有比较细致的生成进度条显示
+使用 react-share 安装依赖
+Terms of Service 需包含Payment & Refund Policy
+考虑预备后期图生视频页面，但不实现也不展现，采用api：wavespeedai/wan-2.1-i2v-480p  Hook 写成 useTransform() 把 prompt、图像参数等逻辑集中写在 lib/transform.ts
+不需要实现3D models app 目前只做网站，没引入app，文案避开app
+
+项目开发步骤
+阶段 1：项目初始化 + 环境配置
+Tech Stack:Next.js (App Router) + TypeScript + Tailwind (mobile-first) + Shadcn 
+PORT 固定为 3002
+界面设计 UI设计
+基于“儿童 + AI + 创意艺术”的网站定位，以下是设计层级建议：
+使用 shadcn/ui 的 Button Input Card 组件，实现网站UI结构
+npx shadcn@latest init  npx shadcn add button  Input Card
+玻璃拟态 + 渐变色+半透明效果	柔和、亲子感强   按钮 hover	 放大 + 发光
+采用自定义Canvas实现光标拖尾特效，选择魔法星星拖尾效果并设置粒子颜色、大小、数量和动画效果等参数：粒子为发光的小星星，半透明消散，位置跟随鼠标，动画流畅，限制在桌面端显示。
+域名KidsDrawingAi.com,网站设计需要配合此域名
+网站设计需要自适应不同设备，移动端友好
+实现分层响应适配	针对不同尺寸手机使用分层CSS，部分系统或者旧版本不支持时自动切换纯色背景
+特别要考虑：移动端左上角网站名和移动端按钮容易文字消失的问题
+网站语言是英文（面向欧美受众）
+
+阶段 2：开发 transform/image 主功能页
+npm install @supabase/supabase-js ← 安装 supabase SDK并配置客户端
+安装@supabase/ssr用于服务端渲染支持，创建客户端工具函数(分离服务端与客户端用法) 
+npx shadcn add toast  npm install sonner toast 
+安装 react-share
+UploadPanel	上传图片（限制5MB），失败重试3次，15s超时机制
+PromptInput	用户提示词，缺省使用默认 prompt
+StyleSelector	横排按钮选择10种风格（emoji + label）
+GenerateButton	调用 replicate 接口，轮询状态，loading 提示
+ResultDisplay	展示结果图，点击按钮自动下载（fetch blob）
+分享功能	使用 react-share 添加 X、Facebook、Reddit 分享按钮
+图片生成中	进度条 + 闪动线性背景	使用 @radix/react-progress + animate-pulse
+Section 滚动加载	弹性出现	使用 Framer Motion + viewport threshold
+下载图像成功	toast 弹出 + 下载动画	sonner + CSS3 旋转/渐隐
+Toast 加入	成功失败都提示，loading toast 要注意 dismiss
+采用vercel，我已操作绑定vercel和replicate;调用replicate.com上的Model:jagilley/controlnet-scribble:435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117
+
+阶段 3：登录系统集成（Supabase Auth）
+登录方式	Magic link + Google
+登录页面	/login 使用 @supabase/auth-ui-react 组件
+supabase建表user_usage：user_id, date, generation_count created_at updated_at
+user_meta： 用来存储付费状态字段user_id，is_paid，paid_at created_at updated_at + 用户名和头像(username avatar_url)
+同步信息	登录成功后 upsert 到 user_meta 表，记录 username 和 avatar_url
+同步 session	✅ 开启 onAuthStateChange，监听状态变化并更新前端
+Cookie 设置	local 用 lax + false，线上 none + true，防止 session 丢失
+dashboard 页面
+登录后下拉菜单内容：
+ Dashboard  Log Out
+dashboard 页面，展示用户的：
+当前套餐状态（是否付费） 月度使用次数 已使用次数/总次数
+付款记录  修改密码  历史生成记录
+
+阶段 4：付费系统接入 creem.io
+user_meta增加plan_type
+创建payment_events表确保webhook处理的幂等性
+pricing   套餐展示页
+checkout  按钮直接跳转到 creem.io 链接，checkout页面直接采用creem.io的
+Webhook	  接收回调更新 Supabase 的 is_paid = true
+
+
+
+技术功能实现注意事项：
+API调用：
+上传Supabase Storage图床获取公开URL  基础图片验证：大小限制（< 5MB）
+图片生成完在哪看：Replicate使用的是异步调用机制 轮询机制 + 获取output图片URL
+生成图像来自外部服务器URL，采用fetch Blob + 模拟点击下载，让浏览器真正实现“自动下载远程图片”
+
+添加错误恢复机制在上传图床环节和生成图像环节（容错机制）：当第一次请求失败时，自动重试3次，使用指数退避策略
+特别针对上传图床环节防止重试逻辑没有被正确触发，失效
+1.请求超时处理不当：上传大文件时，请求可能会卡在"pending"状态而不是返回失败，导致重试逻辑无法触发
+2.错误捕获不完整：某些网络错误（特别是AbortError和超时错误）没有被正确识别为需要重试的错误类型
+防止请求挂起：添加超时控制，设置上传请求如果超过15秒会自动中断，触发重试逻辑，确保请求不会无限期挂起
+
+开发到 transform 功能就集成 toast
+加toast效果（提示）
+安装所需依赖 npx shadcn@latest init（安装这个会自动安装tw-animate-css，可能会报错，需要卸载，可能还要修改代码）  
+npx shadcn add toast  npm install sonner toast 只是一个全站通知系统的“工具”或“入口”。你必须手动写代码告诉它：什么时候、为什么要弹出提示
+在代码里手动插入对应 toast 调用即可
+Sonner的toast需要特别注意在适当时机关闭，特别是loading类型的toast。与React-Toastify不同，Sonner的toast不总是会按照预期自动关闭，特别是在页面导航或组件卸载时，需要明确地dismiss它们。
+
+
+登录系统接入（Supabase Auth）
+/login 登录页 使用 Supabase Auth	支持邮箱注册 + magic link 登录+Google 第三方登录
+在前端用官方提供的 UI 包（@supabase/auth-ui-react）实现 /login 页面
+安装supabase必要依赖
+创建 /login 页面并接入登录组件（App Router）
+为了知道用户是否已登录，我们需要设置一个全局 Hook，useUser.ts管理登录状态。
+登录状态管理	使用 useUser Hook 全局共享
+登录成功后将用户信息同步到 Supabase 表（user_usage）
+登录成功后将用户信息存入全局状态
+登出按钮逻辑 登陆成功提示、跳转优化
+onAuthStateChange + getSession() 必须配合用 
+使用auth.getUser()而非auth.getSession()验证用户登录状态 
+不要重复写 Supabase 客户端（必须全站共用 lib/supabaseClient.ts） 
+客户端用 supabaseApiBrowser.ts，服务端用 supabaseApiServer.ts，不要混用（统一封装对 user_meta 和 user_usage 的操作），所有 Supabase 读写代码封装在 lib/ 中，不要散落到组件里 
+authListener.ts ：Supabase登录状态监听，处理跨标签页的认证状态同步，实现多标签页同步
+middleware.ts 中间件处理 Supabase session
+
+登录后需显示用户名和头像：user_meta表table中添加username和avatar_url字段column 无头像或者3次加载用户头像失败显示首字母
+登录成功后，首次自动 upsert 你的 user_meta，加上upsert逻辑
+
+实现Supabase提供的认证服务进行Google登录
+问题核心就是 OAuth 登录后 Supabase session 不自动同步
+这个问题本地不会出现，因为localhost默认是SameSite=Strict的特例；而线上不同域下就暴露出来了。
+需要付费版supabase才能后台设置SameSite='None' 
+免费版的方案：在代码层面覆盖默认Cookie设置。在创建Supabase客户端时自定义Cookie选项
+sameSite: 'None' → 保证 Google 登录跳转后能同步 Cookie
+secure: true → 必须配合 None 使用，否则浏览器拦截
+环境感知Cookie设置：
+生产环境：sameSite='none' + secure=true
+本地环境：sameSite='lax' + secure=false
+
+特别避免用户会话状态同步问题
+典型的用户元数据同步问题，特别涉及avatar_url字段处理不当。
+关键机制（两者结合使用）
+1.触发器，在supabase创建表的时候创建触发器，在认证用户注册时自动创建user_meta记录在OAuth 2.代码同步，登录后将用户信息（包括头像 URL）从 Supabase Auth 正确同步到我们的 user_meta 表中。
+
+忘记密码重置实现
+新建reset-password页面，并加入supabase-Authentication-URL Configuration-Redirect URLs
+再增加auth/callback页面   本地测试临时修改Site URL为本地地址，上线后记得改回线上地址
+修改 supabase-Authentication-Emails-Reset Password
+<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password">Reset Password</a></p>
+Change Password页面不单独建,直接走Supabase的Auth UI组件自带的忘记密码重置:（在dashboard页面增加Change Password按钮跳转到login页面并传递参数被识别和处理切换到界面forgotten_password）
+Supabase网站说明文档显示（很重要）：点击Reset Password邮件链接后，用户会被自动登录。 这不是旧密码登录，而是Supabase会使用临时token(一次性的)自动为用户创建一个有效的会话（实际上是"登录"了） 因为Supabase为了安全性要求用户必须是已认证状态才能调用updateUserAPI来更改密码。
+用户成功重置密码后：一旦密码成功重置，Supabase 会自动更新会话状态，并将用户的会话状态更新为新密码下的登录状态。
+
+注意避免出现：
+在已登录状态下(本地和线上，邮箱和google登录)，用“新标签页”打开网站的其他页面，结果却变成“未登录状态”（dashboard表现为打不开）
+典型的Supabase多标签页会话同步问题！这是Supabase客户端在多标签页环境下的一个常见问题
+session会话问题 用户session（会话）和页面初始化之间没有完全同步
+
+
+
+文件目录（建议初步结构）
+├─ app/                         # Next.js App Router 页面目录
+│  ├─ layout.tsx               # 全局布局，挂载 ToastProvider、字体等
+│  ├─ page.tsx                 # 首页（Hero + CTA + Banner）
+│  ├─ transform/
+│  │   ├─ image/page.tsx       # 图生图主页面
+│  │   └─ video/page.tsx       # 图生视频页面（预留骨架）
+│  ├─ login/page.tsx           # 登录页（Supabase UI）
+│  ├─ reset-password/page.tsx  # 重置密码页
+│  ├─ dashboard/page.tsx       # 用户中心页（使用情况/付款状态）
+│  ├─ pricing/page.tsx         # 套餐页（跳转Paddle）
+│  ├─ auth/
+│  │   └─ callback/route.ts    # Supabase OAuth 回调处理
+│
+├─ components/                 # 所有 UI 组件
+│  ├─ UploadPanel.tsx
+│  ├─ PromptInput.tsx
+│  ├─ StyleSelector.tsx
+│  ├─ GenerateButton.tsx
+│  ├─ ResultDisplay.tsx
+│  ├─ DownloadButton.tsx
+│  ├─ DashboardStats.tsx
+│  ├─ UserInfoCard.tsx
+│  ├─ PlanCardList.tsx
+│  └─ Shared/                 # 通用组件（Header、Footer、Toast）
+│     ├─ Header.tsx
+│     ├─ Footer.tsx
+│     └─ ToastProvider.tsx
+│
+├─ lib/                        # 工具逻辑封装
+│  ├─ supabaseClient.ts        # Supabase 初始化，不要重复写，必须全站共用
+│  ├─ transform.ts             # 调用 Replicate 图像/视频生成逻辑
+│  ├─ uploadToSupabase.ts      # 图片上传逻辑（含超时 + retry）
+│  ├─ downloadBlob.ts          # fetch 下载远程图片
+│  ├─ toast.ts                 # 封装统一 toast 方法
+│  ├─ authListener.ts          # Supabase 登录状态监听
+│  └─ constants.ts             # prompt 模板 / 风格选项配置
+      supabaseApiServer.ts       所有 Supabase 读写代码封装在 lib/ 中，不要散落到组件里
+	  supabaseApiBrowser.ts
+	  supabase-server.ts
+	  supabase-browser.ts
+│
+├─ hooks/                      # 自定义 hooks
+│  └─ useUser.ts               # 全局用户状态管理（含 session 同步）
+│
+├─ styles/                     # 全局样式
+│  └─ globals.css              # Tailwind 样式配置
+│
+├─ public/                     # 公共静态资源（图标、背景图等）
+│  └─ favicon.ico
+│
+├─ .env.local                  # 环境变量配置
+├─ tailwind.config.ts         # Tailwind 配置
+├─ postcss.config.js          # PostCSS 配置
+└─ next.config.js             # Next.js 配置
+   middleware.ts               中间件处理 Supabase session
+   supabase
+   types                       统一管理TypeScript类型
+   config                      支付阶段，复杂项目适合
+

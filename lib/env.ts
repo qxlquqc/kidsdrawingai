@@ -59,7 +59,7 @@ export function validateServerEnv(): { valid: boolean; missingVars: string[] } {
   
   // 验证REPLICATE_API_TOKEN格式
   if (replicateToken && (!replicateToken.startsWith('r8_') || replicateToken.length < 30)) {
-    console.warn('⚠️ Replicate API Token 格式可能不正确，应以r8_开头并且足够长');
+    // 可能无用，待确认 - 原token格式警告
   }
   
   return {
@@ -83,8 +83,6 @@ export function getReplicateApiToken(): string {
   if (!token) {
     console.error('⚠️ 未找到Replicate API Token，请检查.env.local文件');
     console.error('请确保设置了以下任一变量: REPLICATE_API_TOKEN, NEXT_PUBLIC_REPLICATE_API_TOKEN');
-  } else {
-    console.log(`✅ 找到了Replicate API令牌 (${token.substring(0, 3)}...)`);
   }
   
   return token;
@@ -94,8 +92,8 @@ export function validateCreemEnv(): { valid: boolean; missingVars: string[] } {
   const requiredVars = [
     'CREEM_API_KEY',
     'CREEM_WEBHOOK_SECRET',
-    'CREEM_SUCCESS_URL',
-    'CREEM_CANCEL_URL'
+    'CREEM_SUCCESS_URL'
+    // 注意：CREEM_CANCEL_URL 不包含在必需变量中，因为 Creem API 不支持 cancel_url 字段
   ];
   
   const missingVars = requiredVars.filter(varName => !process.env[varName]);

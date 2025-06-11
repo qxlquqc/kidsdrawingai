@@ -1,0 +1,110 @@
+NEXT_PUBLIC_REPLICATE_API_TOKEN在.env.local读取
+Model:black-forest-labs/flux-kontext-pro
+
+参考链接：
+https://replicate.com/black-forest-labs/flux-kontext-pro
+https://replicate.com/black-forest-labs/flux-kontext-pro?input=nodejs
+https://replicate.com/black-forest-labs/flux-kontext-pro/api/learn-more
+https://replicate.com/black-forest-labs/flux-kontext-pro/api/schema
+
+参数配置：
+prompt拼接逻辑说明：用户输入 + style 映射提示词 + 质量补充语句（high quality, professional, beautiful composition）
+用户输入为空时，使用默认值：
+A cute and clean illustration of a simple character or object based on this uploaded sketch, soft colors and harmonious style
+用户选择的style选项映射为具体的prompt补充，控制图像style（style 10个选项）
+Style	       映射prompt
+Any	           clean and high quality illustration, complete structure, soft lines
+3D	           3D render, friendly design, soft colors, simple shapes, clear structure
+Anime	       anime style, sharp lines, pastel colors, clean design
+Cartoon	       cartoon style, bold outlines, simplified shapes
+Fantasy	       fantasy art, magical lighting, soft colors, storybook illustration
+Coloring Page  coloring book illustration, black and white lineart only, no color, no shading, minimalistic
+Painting	    oil painting style, canvas texture, visible brush strokes
+Pixel Art	    pixel art style, low resolution look, sharp edges, retro colors
+Sketch Painting	sketch style, pencil strokes, watercolor effect, textured paper background
+Realistic 	    realistic rendering, soft shadows, natural proportions, clear detail
+
+
+
+Input schema
+{
+  "type": "object",
+  "title": "Input",
+  "required": [
+    "prompt"
+  ],
+  "properties": {
+    "seed": {
+      "type": "integer",
+      "title": "Seed",
+      "x-order": 3,
+      "nullable": true,
+      "description": "Random seed. Set for reproducible generation"
+    },
+    "prompt": {
+      "type": "string",
+      "title": "Prompt",
+      "x-order": 0,
+      "description": "Text description of what you want to generate, or the instruction on how to edit the given image."
+    },
+    "input_image": {
+      "type": "string",
+      "title": "Input Image",
+      "format": "uri",
+      "x-order": 1,
+      "nullable": true,
+      "description": "Image to use as reference. Must be jpeg, png, gif, or webp."
+    },
+    "aspect_ratio": {
+      "enum": [
+        "match_input_image",
+        "1:1",
+        "16:9",
+        "9:16",
+        "4:3",
+        "3:4",
+        "3:2",
+        "2:3",
+        "4:5",
+        "5:4",
+        "21:9",
+        "9:21",
+        "2:1",
+        "1:2"
+      ],
+      "type": "string",
+      "title": "aspect_ratio",
+      "description": "Aspect ratio of the generated image. Use 'match_input_image' to match the aspect ratio of the input image.",
+      "default": "match_input_image",
+      "x-order": 2
+    },
+    "output_format": {
+      "enum": [
+        "jpg",
+        "png"
+      ],
+      "type": "string",
+      "title": "output_format",
+      "description": "Output format for the generated image",
+      "default": "png",
+      "x-order": 4
+    },
+    "safety_tolerance": {
+      "type": "integer",
+      "title": "Safety Tolerance",
+      "default": 2,
+      "maximum": 6,
+      "minimum": 0,
+      "x-order": 5,
+      "description": "Safety tolerance, 0 is most strict and 6 is most permissive. 2 is currently the maximum allowed when input images are used."
+    }
+  }
+}
+
+
+Output schema
+{
+  "type": "string",
+  "title": "Output",
+  "format": "uri"
+}

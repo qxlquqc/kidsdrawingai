@@ -55,9 +55,10 @@ export default function Avatar({ src, name, size = 40, className = '' }: AvatarP
   const handleError = () => {
     if (retries < 3 && imgSrc) {
       // 尝试重新加载图片（最多3次）
-      setRetries(prev => prev + 1)
-      // 添加随机参数避免缓存
-      setImgSrc(`${imgSrc}?retry=${Date.now()}`)
+      const nextRetryCount = retries + 1
+      setRetries(nextRetryCount)
+      // 添加重试参数避免缓存，使用递增计数器而不是时间戳
+      setImgSrc(`${imgSrc}?retry=${nextRetryCount}`)
     } else {
       // 超过重试次数，显示首字母头像
       setLoadFailed(true)
@@ -96,6 +97,8 @@ export default function Avatar({ src, name, size = 40, className = '' }: AvatarP
         sizes={`${size}px`}
         className="object-cover"
         onError={handleError}
+        loading="lazy"
+        quality={80}
       />
     </div>
   )

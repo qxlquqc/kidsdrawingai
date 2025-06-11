@@ -388,3 +388,81 @@ SELECT
 FROM pg_policies 
 WHERE tablename = 'payment_events';
 ```
+
+## 2025/01/02 - Google OAuth客户端配置记录
+
+### Google Cloud Console OAuth配置更新
+
+根据用户提供的Google Cloud Console配置截图，记录当前OAuth客户端设置：
+
+- **配置时间**：2025年01月02日
+- **操作类型**：OAuth客户端配置验证
+- **配置项目**：Google OAuth 2.0客户端配置
+
+#### 已获授权的JavaScript来源（共3个）：
+1. `https://eohxvswbydnwybzrupng.supabase.co` - Supabase项目域名
+2. `https://kidsdrawingai.com` - 生产环境域名  
+3. `http://localhost:3002` - 本地开发环境
+
+#### 已获授权的重定向URI（共3个）：
+1. `https://eohxvswbydnwybzrupng.supabase.co/auth/v1/callback` - Supabase OAuth回调地址
+2. `https://kidsdrawingai.com/auth/v1/callback` - 生产环境OAuth回调地址
+3. `http://localhost:3002/auth/v1/callback` - 本地开发OAuth回调地址
+
+#### 客户端密钥信息：
+- **客户端密钥**：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（已启用状态）
+- **创建日期**：2025年5月22日 GMT+8 11:12:27
+- **状态**：✅ 已启用
+
+#### 配置目的：
+支持Google OAuth登录在多个环境下的正常运行：
+- 生产环境：kidsdrawingai.com
+- Supabase环境：eohxvswbydnwybzrupng.supabase.co  
+- 本地开发：localhost:3002
+
+## 2025/01/02 - Supabase Authentication URL配置记录
+
+### Supabase URL Configuration设置
+
+- **配置时间**：2025年01月02日
+- **操作类型**：URL Configuration配置验证
+- **配置位置**：Supabase Dashboard -> Authentication -> URL Configuration
+
+#### Site URL配置：
+- **Site URL**：`https://kidsdrawingai.com`
+- **说明**：默认重定向URL，用于认证重定向的默认地址
+
+#### Redirect URLs配置（共7个）：
+1. `https://kidsdrawingai.com` - 生产环境主域名
+2. `https://kidsdrawingai.com/` - 生产环境主域名（带斜杠）
+3. `http://localhost:3002` - 本地开发环境
+4. `https://kidsdrawingai.com/reset-password` - 生产环境密码重置页面
+5. `https://kidsdrawingai.com/auth/callback` - 生产环境认证回调
+6. `http://localhost:3002/reset-password` - 本地开发密码重置页面
+7. `http://localhost:3002/auth/callback` - 本地开发认证回调
+
+## 2025/01/02 - Supabase邮件模板配置记录
+
+### Supabase Email Templates设置
+
+- **配置时间**：2025年01月02日
+- **操作类型**：邮件模板配置验证
+- **配置位置**：Supabase Dashboard -> Authentication -> Emails -> Templates -> Reset Password
+
+#### 邮件限制提醒：
+- **状态**：显示Email rate-limits和restrictions警告
+- **说明**：使用内置邮件服务，有速率限制，不适用于生产应用
+
+#### Reset Password邮件模板配置：
+- **Subject heading**：`Reset Your Password`
+- **Message body**（HTML源码）：
+  ```html
+  <h2>Reset Password</h2>
+  <p>Follow this link to reset the password for your user:</p>
+  <p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password">Reset Password</a></p>
+  ```
+
+#### 邮件模板说明：
+- 使用Supabase模板变量：`{{ .SiteURL }}`、`{{ .TokenHash }}`
+- 重定向路径：`/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password`
+- 支持密码重置功能完整流程

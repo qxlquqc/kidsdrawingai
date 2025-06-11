@@ -1,13 +1,10 @@
-// Replicate控制网模型ID
-export const CONTROLNET_MODEL_ID = 'jagilley/controlnet-scribble:435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117';
+// Flux Kontext Pro模型ID
+export const FLUX_MODEL_ID = 'black-forest-labs/flux-kontext-pro';
 
 // 默认提示词，当用户未提供时使用
 export const DEFAULT_PROMPT = 'A cute and clean illustration of a simple character or object based on this uploaded sketch, soft colors and harmonious style';
 
-// 默认负面提示词，固定不变
-export const DEFAULT_NEGATIVE_PROMPT = 'low quality, low resolution, blurry, ugly, disfigured, distorted, stagnant, malformed, deformed, poorly drawn, bad anatomy, bad hands, missing fingers, extra digits, distorted face, duplicate limbs, broken limbs, watermark';
-
-// 风格选项及对应的a_prompt
+// 风格选项及对应的映射提示词
 export const STYLE_OPTIONS = [
   {
     id: 'any',
@@ -43,7 +40,7 @@ export const STYLE_OPTIONS = [
     id: 'coloring',
     name: 'Coloring Page',
     emoji: '📝',
-    a_prompt: 'coloring book style, clean lineart, no shading, black and white',
+    a_prompt: 'coloring book illustration, black and white lineart only, no color, no shading, minimalistic',
   },
   {
     id: 'painting',
@@ -86,10 +83,10 @@ export interface TransformParams {
   prompt?: string;
   // 选择的风格ID，对应STYLE_OPTIONS中的id
   styleId?: string;
-  // 是否遵循原始绘图 (0.1-30，默认9)
-  // 0.1=完全遵循原图，30=几乎忽略原图
+  // 是否遵循原始绘图 (0.1-30，默认9) - 注意：新API中此参数不再使用
+  
   followDrawingStrength?: number;
-  // 自定义图像分辨率
+  // 自定义图像分辨率 - 注意：新API中此参数不再使用，改用aspect_ratio
   resolution?: '256' | '512' | '768';
 }
 
@@ -143,24 +140,18 @@ async function fetchWithTimeout(
  * 创建Replicate API预测
  */
 async function createPrediction(params: TransformParams): Promise<{ id: string, error?: string }> {
-  console.log('创建预测任务，参数:', {
-    hasImageUrl: !!params.imageUrl,
-    imageUrlLength: params.imageUrl.length,
-    prompt: params.prompt || DEFAULT_PROMPT,
-    styleId: params.styleId,
-    followDrawingStrength: params.followDrawingStrength
-  });
 
-  // 确定实际使用的提示词
-  const prompt = params.prompt && params.prompt.trim() !== '' ? params.prompt : DEFAULT_PROMPT;
-  console.log('使用的提示词:', prompt, '是否使用默认:', prompt === DEFAULT_PROMPT);
+
+  // 确定实际使用的基础提示词
+  const basePrompt = params.prompt && params.prompt.trim() !== '' ? params.prompt : DEFAULT_PROMPT;
+
   
-  // 确定风格对应的a_prompt
+  // 确定风格对应的映射提示词
   let selectedStyleId = params.styleId || 'any';
   // 确保styleId存在于STYLE_OPTIONS中
   const validStyleIds = STYLE_OPTIONS.map(s => s.id);
   if (!validStyleIds.includes(selectedStyleId)) {
-    console.warn('请求的风格ID无效，切换到默认风格', { requestedStyleId: selectedStyleId, validStyleIds });
+    // 可能无用，待确认 - 原warn日志
     selectedStyleId = 'any'; // 切换到默认风格
   }
   
@@ -169,42 +160,28 @@ async function createPrediction(params: TransformParams): Promise<{ id: string, 
   
   // 确保一定有风格对象
   const finalStyle = style || defaultStyle;
-  console.log('最终使用的风格', { 
-    styleId: finalStyle.id, 
-    styleName: finalStyle.name, 
-    stylePrompt: finalStyle.a_prompt,
-    wasDefaultFallback: !style
-  });
+
   
-  const a_prompt = finalStyle.a_prompt;
+  // 构建最终的prompt：用户输入 + style映射提示词 + 质量补充语句
+  const finalPrompt = `${basePrompt}, ${finalStyle.a_prompt}, high quality, professional, beautiful composition`;
   
-  // 确定scale值 (如果提供了followDrawingStrength则使用，否则默认为9)
-  const scale = params.followDrawingStrength !== undefined 
-    ? params.followDrawingStrength 
-    : 9;
+
   
-  // 确定分辨率
-  const resolution = params.resolution || '512';
-  
-  // 构建完整的输入参数
-  const input = {
-    image: params.imageUrl,
-    prompt: prompt,
-    a_prompt: a_prompt,
-    n_prompt: DEFAULT_NEGATIVE_PROMPT,
-    num_samples: "1",
-    image_resolution: resolution,
-    ddim_steps: 20,
-    scale: scale,
+  // 构建完整的输入参数（新的Flux Kontext Pro API格式）
+  const input: any = {
+    prompt: finalPrompt,
+    aspect_ratio: params.imageUrl ? "match_input_image" : "1:1", // 无图片时使用方形比例
+    output_format: "png",
+    safety_tolerance: 2,
+    seed: undefined // 让系统随机生成
   };
   
-  console.log('🧪 最终传入 Replicate 的 input:', {
-    ...input,
-    image: input.image.substring(0, 30) + '...', // 截断图片URL以便于查看
-    prompt: input.prompt,
-    a_prompt: input.a_prompt,
-    n_prompt: input.n_prompt.substring(0, 50) + '...',
-  });
+  // 只有当有图片URL时才添加input_image参数
+  if (params.imageUrl && params.imageUrl.trim() !== '') {
+    input.input_image = params.imageUrl;
+  }
+  
+
   
   // 获取API令牌
   const REPLICATE_API_TOKEN = process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN || '';
@@ -216,8 +193,6 @@ async function createPrediction(params: TransformParams): Promise<{ id: string, 
   
   // 首先尝试通过我们的API路由调用
   try {
-    console.log('准备通过API路由发送创建预测请求');
-    
     const response = await fetchWithTimeout(
       '/api/replicate/predictions', 
       {
@@ -226,7 +201,7 @@ async function createPrediction(params: TransformParams): Promise<{ id: string, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: CONTROLNET_MODEL_ID,
+          model: FLUX_MODEL_ID,
           input: input,
         }),
         // 禁用缓存
@@ -239,19 +214,17 @@ async function createPrediction(params: TransformParams): Promise<{ id: string, 
       const error = await response.text();
       console.error('API路由错误，尝试直接调用:', error);
       // 失败后尝试直接调用Replicate API
-      return await directReplicateCall(CONTROLNET_MODEL_ID, input, REPLICATE_API_TOKEN);
+      return await directReplicateCall(FLUX_MODEL_ID, input, REPLICATE_API_TOKEN);
     }
 
     const data = await response.json();
-    console.log('Prediction created:', data);
     
     return { id: data.id };
   } catch (error: any) {
     console.error('通过API路由创建预测失败:', error);
-    console.log('尝试直接调用Replicate API...');
     
     // 尝试直接调用Replicate API作为备用方案
-    return await directReplicateCall(CONTROLNET_MODEL_ID, input, REPLICATE_API_TOKEN);
+    return await directReplicateCall(FLUX_MODEL_ID, input, REPLICATE_API_TOKEN);
   }
 }
 
@@ -264,8 +237,6 @@ async function directReplicateCall(
   token: string
 ): Promise<{ id: string, error?: string }> {
   try {
-    console.log('直接调用Replicate API创建预测');
-    
     const response = await fetchWithTimeout(
       'https://api.replicate.com/v1/predictions', 
       {
@@ -291,7 +262,6 @@ async function directReplicateCall(
     }
 
     const data = await response.json();
-    console.log('直接调用Replicate API成功:', data);
     
     return { id: data.id };
   } catch (error: any) {
@@ -306,10 +276,8 @@ async function directReplicateCall(
 async function directGetPrediction(
   id: string,
   token: string
-): Promise<{ status: string; output: string[] | null; error?: string }> {
+): Promise<{ status: string; output: string | null; error?: string }> {
   try {
-    console.log(`直接从Replicate API获取预测 ${id} 的结果`);
-    
     const response = await fetchWithTimeout(
       `https://api.replicate.com/v1/predictions/${id}`,
       {
@@ -331,7 +299,6 @@ async function directGetPrediction(
     }
 
     const result = await response.json();
-    console.log(`直接获取预测结果成功，状态: ${result.status}`);
     
     return result;
   } catch (error: any) {
@@ -343,9 +310,7 @@ async function directGetPrediction(
 /**
  * 获取预测结果
  */
-async function getPrediction(id: string): Promise<{ status: string; output: string[] | null; error?: string }> {
-  console.log(`获取预测结果, ID: ${id}`);
-  
+async function getPrediction(id: string): Promise<{ status: string; output: string | null; error?: string }> {
   // 获取API令牌
   const REPLICATE_API_TOKEN = process.env.NEXT_PUBLIC_REPLICATE_API_TOKEN || '';
   
@@ -355,8 +320,6 @@ async function getPrediction(id: string): Promise<{ status: string; output: stri
   }
   
   try {
-    console.log(`准备通过API路由获取预测请求: /api/replicate/predictions/${id}`);
-    
     const response = await fetchWithTimeout(
       `/api/replicate/predictions/${id}`,
       {
@@ -378,15 +341,10 @@ async function getPrediction(id: string): Promise<{ status: string; output: stri
     }
 
     const result = await response.json();
-    console.log(`预测状态: ${result.status}`, {
-      hasOutput: Array.isArray(result.output) && result.output.length > 0,
-      hasError: !!result.error
-    });
     
     return result;
   } catch (error: any) {
     console.error('通过API路由获取预测失败:', error);
-    console.log('尝试直接从Replicate获取预测...');
     
     // 失败后尝试直接调用
     return await directGetPrediction(id, REPLICATE_API_TOKEN);
@@ -408,16 +366,15 @@ export async function transformImage(
     // 动态导入unstable_noStore以避免服务器端渲染错误
     const { unstable_noStore } = await import('next/cache');
     unstable_noStore();
-    console.log('Next.js缓存已禁用');
   } catch (e) {
-    console.warn('无法禁用Next.js缓存，这在客户端是正常的', e);
+    // 可能无用，待确认 - 原缓存禁用警告
   }
 
-  console.log('开始图像转换过程', {
+  console.log('🎨 开始图像转换过程', {
     hasImageUrl: !!params.imageUrl,
     hasPrompt: !!params.prompt,
     styleId: params.styleId,
-    followDrawingStrength: params.followDrawingStrength
+    imageUrlPreview: params.imageUrl.substring(0, 50) + '...'
   });
   
   // 首先验证前端环境变量是否正确配置
@@ -458,7 +415,7 @@ export async function transformImage(
     // 轮询获取结果
     let pollCount = 0;
     let status: string = 'starting';
-    let output: string[] | null = null;
+    let output: string | null = null;
     
     console.log('步骤2: 开始轮询获取结果');
     
@@ -476,7 +433,7 @@ export async function transformImage(
         
         console.log(`轮询结果：状态=${status}`, {
           pollCount, 
-          hasOutput: Array.isArray(prediction.output) && prediction.output.length > 0
+          hasOutput: !!prediction.output
         });
         
         // 根据状态更新进度
@@ -497,9 +454,9 @@ export async function transformImage(
           output = prediction.output;
           onProgress?.(100); // 100%
           console.log('预测成功完成', { 
-            hasOutput: Array.isArray(output) && output.length > 0,
-            firstOutputUrl: Array.isArray(output) && output.length > 0 
-              ? output[0].substring(0, 30) + '...' 
+            hasOutput: !!output,
+            outputUrl: output
+              ? output.substring(0, 30) + '...' 
               : '无输出'
           });
           break;
@@ -532,7 +489,7 @@ export async function transformImage(
     }
     
     // 检查输出结果
-    if (!output || !Array.isArray(output) || output.length === 0) {
+    if (!output || typeof output !== 'string') {
       console.error('预测成功但没有有效输出', { output });
       return {
         success: false,
@@ -541,15 +498,12 @@ export async function transformImage(
     }
     
     // 成功返回结果
-    const resultUrl = output.length > 1 ? output[1] : output[0]; // 使用output[1]作为最终图像，如果不存在则回退到output[0]
     console.log('图像转换成功', { 
-      outputUrl: resultUrl.substring(0, 50) + '...',
-      totalOutputs: output.length,
-      usingOutput: output.length > 1 ? 'output[1]' : 'output[0]'
+      outputUrl: output.substring(0, 50) + '...'
     });
     return {
       success: true,
-      outputUrl: resultUrl,
+      outputUrl: output,
     };
   } catch (error: any) {
     console.error('Transform error:', error);

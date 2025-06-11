@@ -17,28 +17,37 @@ interface StarParticle {
 }
 
 export function CursorStarEffect() {
-  // 使用useState来避免hydration错误
-  const [isMounted, setIsMounted] = useState(false);
-  
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameId = useRef<number>(0);
   const particles = useRef<StarParticle[]>([]);
   const mousePosition = useRef({ x: 0, y: 0 });
   const prevMousePosition = useRef({ x: 0, y: 0 });
-  const animationFrameId = useRef<number>(0);
   const isMoving = useRef(false);
   const moveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
   
   // Only show on desktop
   const isMobile = useRef(false);
 
   const checkDevice = () => {
+    if (typeof window === 'undefined') return true; // SSR时假设为mobile，不显示canvas
     isMobile.current = window.innerWidth <= 768 || 
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   };
   
-  // 确保组件只在客户端渲染
+  // 确保组件只在客户端渲染，并进行设备检查
   useEffect(() => {
     setIsMounted(true);
+    
+    // 客户端挂载后进行设备检查
+    checkDevice();
+    
+    // 只有在桌面端才显示canvas
+    if (!isMobile.current) {
+      setShowCanvas(true);
+    }
+    
     console.log("CursorStarEffect mounted");
   }, []);
 
@@ -333,19 +342,9 @@ export function CursorStarEffect() {
     };
   }, [isMounted]);
   
-  // 如果组件尚未挂载，返回null防止服务器端渲染
-  if (!isMounted) {
+  // 如果组件尚未挂载或是移动设备，返回null
+  if (!isMounted || !showCanvas) {
     return null;
-  }
-  
-  // Mobile check (client-side only)
-  if (typeof window !== 'undefined' && isMounted) {
-    const isMobileDevice = window.innerWidth <= 768 || 
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (isMobileDevice) {
-      return null;
-    }
   }
   
   console.log("Rendering cursor effect canvas");

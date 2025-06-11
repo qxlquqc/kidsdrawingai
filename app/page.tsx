@@ -7,8 +7,47 @@ import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import TransformGallery from "@/components/TransformGallery";
 
 export default function Home() {
+  // Structured Data (JSON-LD)
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "KidsDrawingAI",
+    "description": "Transform your child's drawings into stunning digital artwork with our advanced AI technology.",
+    "url": "https://kidsdrawingai.com",
+    "applicationCategory": "DesignApplication",
+    "operatingSystem": "Web browser",
+    "offers": {
+      "@type": "Offer",
+      "price": "7.99",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock",
+      "category": "AI Art Transformation"
+    },
+    "creator": {
+      "@type": "Organization",
+      "name": "KidsDrawingAI Team"
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Parents and Children",
+      "geographicArea": "Worldwide"
+    },
+    "featureList": [
+      "AI-powered drawing transformation",
+      "Multiple artistic styles",
+      "Instant download and sharing",
+      "Preserve original artwork essence",
+      "Family-friendly interface"
+    ]
+  };
+
   return (
     <div className="min-h-screen">
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       {/* Hero Section */}
       <section className="px-4 py-20 md:py-28 relative overflow-hidden -mt-20 pt-32">
         {/* Abstract Shapes Background */}
@@ -19,8 +58,8 @@ export default function Home() {
         </div>
 
         <div className="container mx-auto max-w-6xl relative z-10">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="flex-1 text-center md:text-left mb-12 md:mb-0">
+          <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
+            <div className="flex-1 text-center md:text-left mb-8 md:mb-0 order-2 md:order-1">
               <h1 className="font-bold mb-6">
                 <span className="gradient-text block text-4xl md:text-5xl">Turn Kids' Drawings</span>
                 <span className="gradient-text block text-4xl md:text-5xl mt-1">into Magical Creations</span>
@@ -47,19 +86,21 @@ export default function Home() {
             </div>
             
             {/* Right Side Showcase - BeforeAfter Slider */}
-            <div className="flex-1 relative">
-              <div className="rounded-2xl p-6 overflow-hidden">
+            <div className="w-full md:flex-1 relative order-1 md:order-2">
+              <div className="rounded-2xl p-4 md:p-6 overflow-hidden">
                 <div className="absolute top-2 right-2 bg-gradient-to-r from-[#ff80ab] to-[#7c4dff] text-white text-xs rounded-full px-3 py-1 z-10">
                   Live Demo
                 </div>
                 
                 {/* BeforeAfter Slider Component */}
+                <div className="w-full max-w-lg mx-auto md:max-w-none">
                 <BeforeAfterSlider
                   beforeImage="/images/slider/before.jpg"
                   afterImage="/images/slider/after.jpg"
                   beforeAlt="Child's original drawing"
                   afterAlt="AI enhanced artwork"
                 />
+                </div>
                 
                 <div className="mt-4 flex justify-between items-center">
                   <div className="glass-card rounded-full px-3 py-1">

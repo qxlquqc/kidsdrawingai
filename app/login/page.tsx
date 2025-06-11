@@ -13,11 +13,19 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const [supabase] = useState(() => createClient());
   const [isLoading, setIsLoading] = useState(true);
+  const [redirectTo, setRedirectTo] = useState('/auth/callback');
   
   // 获取type参数，用于确定显示哪种验证视图
   const type = searchParams.get('type');
   // 确定初始视图
   const initialView = type === 'forgotten_password' ? 'forgotten_password' : undefined;
+  
+  // 设置重定向URL（避免hydration错误）
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setRedirectTo(`${window.location.origin}/auth/callback`);
+    }
+  }, []);
   
   // 检查用户是否已登录，如果已登录则重定向到首页
   useEffect(() => {
@@ -158,7 +166,7 @@ function LoginContent() {
             } 
           }}
           providers={['google']}
-          redirectTo={`${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`}
+          redirectTo={redirectTo}
           localization={{
             variables: {
               sign_up: {

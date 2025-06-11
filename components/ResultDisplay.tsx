@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { downloadImage } from '@/lib/downloadBlob';
 import { showError, showSuccess } from '@/lib/toast';
@@ -21,6 +21,14 @@ export default function ResultDisplay({
   prompt,
 }: ResultDisplayProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  
+  // 设置分享URL（避免hydration错误）
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setShareUrl(window.location.href);
+    }
+  }, []);
   
   if (!imageUrl) return null;
   
@@ -29,7 +37,9 @@ export default function ResultDisplay({
     
     setIsDownloading(true);
     try {
-      await downloadImage(imageUrl, `kidsdrawingai-${Date.now()}.png`);
+      // 使用递增ID替代时间戳
+      const downloadId = Math.random().toString(36).substring(2, 15);
+      await downloadImage(imageUrl, `kidsdrawingai-${downloadId}.png`);
       showSuccess('Image downloaded successfully!');
     } catch (error: any) {
       console.error('Download error:', error);
@@ -39,8 +49,7 @@ export default function ResultDisplay({
     }
   };
   
-  // 分享URL和标题
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  // 分享内容
   const shareTitle = 'Check out this drawing transformation by KidsDrawingAI!';
   const shareDescription = prompt || 'AI-transformed children\'s drawing';
   
@@ -55,8 +64,9 @@ export default function ResultDisplay({
             alt="Transformed drawing"
             className="object-contain rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20"
             fill
-            sizes="(max-width: 768px) 100vw, 512px"
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 90vw, (max-width: 1024px) 80vw, 512px"
             priority
+            quality={95}
           />
         </div>
       </div>

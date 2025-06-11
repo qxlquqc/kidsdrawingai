@@ -7,6 +7,7 @@ import { useUser } from '@/hooks/useUser'
 import { showSuccess, showInfo, toast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
 import Avatar from '@/components/Avatar'
+import { isMobileDevice } from '@/lib/deviceDetection'
 
 interface UserDashboardProps {
   user: User
@@ -173,7 +174,14 @@ export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage
             duration: 6000,
             action: {
               label: 'Learn More',
-              onClick: () => window.open('https://docs.creem.io/learn/customers/customer-portal', '_blank')
+              onClick: () => {
+                const learnMoreUrl = 'https://docs.creem.io/learn/customers/customer-portal';
+                if (isMobileDevice()) {
+                  window.location.href = learnMoreUrl;
+                } else {
+                  window.open(learnMoreUrl, '_blank', 'noopener,noreferrer');
+                }
+              }
             }
           });
           return;
@@ -186,23 +194,32 @@ export default function UserDashboard({ user, userMeta, monthlyUsage, totalUsage
       // 重定向到Customer Portal
       if (data.customer_portal_link) {
         console.log('🔗 Redirecting to Customer Portal:', data.customer_portal_link);
+        console.log('📱 Device type:', isMobileDevice() ? 'Mobile' : 'Desktop');
         toast.success("Opening billing portal...", { duration: 3000 });
         
-        // 在新窗口打开，避免用户失去当前页面
-        const newWindow = window.open(data.customer_portal_link, '_blank');
-        
-        // 检查弹窗是否被阻止
-        if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
-          toast.error("Pop-up blocked. Please allow pop-ups for this site or copy the link manually.", {
-            duration: 8000,
-            action: {
-              label: 'Copy Link',
-              onClick: () => {
-                navigator.clipboard.writeText(data.customer_portal_link);
-                toast.success("Link copied to clipboard!");
+        // 根据设备类型选择打开方式
+        if (isMobileDevice()) {
+          console.log('📱 Mobile device detected - opening in same window to avoid popup blocking');
+          // 移动端：同窗口打开，避免Pop-up拦截
+          window.location.href = data.customer_portal_link;
+        } else {
+          console.log('🖥️ Desktop device detected - opening in new window');
+          // 桌面端：新窗口打开，避免用户失去当前页面
+          const newWindow = window.open(data.customer_portal_link, '_blank', 'noopener,noreferrer');
+          
+          // 检查弹窗是否被阻止
+          if (!newWindow || newWindow.closed || typeof newWindow.closed == 'undefined') {
+            toast.error("Pop-up blocked. Please allow pop-ups for this site or copy the link manually.", {
+              duration: 8000,
+              action: {
+                label: 'Copy Link',
+                onClick: () => {
+                  navigator.clipboard.writeText(data.customer_portal_link);
+                  toast.success("Link copied to clipboard!");
+                }
               }
-            }
-          });
+            });
+          }
         }
       } else {
         console.error('❌ No customer portal link in response:', data);

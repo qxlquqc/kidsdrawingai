@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing model parameter' }, { status: 400, headers });
     }
 
-    if (!body.input || !body.input.image || !body.input.prompt) {
+    if (!body.input || !body.input.prompt) {
       console.log('Missing required input parameters', { input: body.input });
-      return NextResponse.json({ error: 'Missing required input parameters' }, { status: 400, headers });
+      return NextResponse.json({ error: 'Missing required input parameters (prompt is required)' }, { status: 400, headers });
     }
 
     // 从环境变量获取Replicate API Token，使用我们的辅助函数
@@ -92,21 +92,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 详细记录input对象的内容（截断图片URL以避免日志过长）
+    // 详细记录input对象的内容（截断图片URL和prompt以避免日志过长）
     console.log('🧪 API路由：完整的请求参数:', {
       userId: user.id,
       model: body.model,
       input: {
         ...body.input,
-        image: body.input.image ? (typeof body.input.image === 'string' ? 
-          (body.input.image.substring(0, 30) + '...') : '非字符串图片URL') : '未提供图片',
-        prompt: body.input.prompt,
-        a_prompt: body.input.a_prompt,
-        n_prompt: body.input.n_prompt ? (body.input.n_prompt.substring(0, 50) + '...') : '未提供负面提示词',
-        scale: body.input.scale,
-        image_resolution: body.input.image_resolution,
-        ddim_steps: body.input.ddim_steps
+        input_image: body.input.input_image ? (typeof body.input.input_image === 'string' ? 
+          (body.input.input_image.substring(0, 30) + '...') : '非字符串图片URL') : '未提供图片',
+        prompt: body.input.prompt ? (body.input.prompt.substring(0, 100) + '...') : '未提供提示词',
+        aspect_ratio: body.input.aspect_ratio,
+        output_format: body.input.output_format,
+        safety_tolerance: body.input.safety_tolerance,
+        seed: body.input.seed
       }
+    });
+    
+    // 检查模型格式，Replicate需要正确的version参数
+    console.log('🔍 模型参数检查:', {
+      providedModel: body.model,
+      isCorrectFormat: body.model.includes('/'),
+      expectedFormat: 'black-forest-labs/flux-kontext-pro'
     });
     
     const requestBody = JSON.stringify({
@@ -125,6 +131,12 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
     
     try {
+      console.log('🌐 准备调用Replicate API', {
+        url: 'https://api.replicate.com/v1/predictions',
+        tokenPrefix: REPLICATE_API_TOKEN.substring(0, 8) + '...',
+        bodySize: requestBody.length
+      });
+
       // 使用no-store确保不缓存Replicate API的响应
       const response = await fetch('https://api.replicate.com/v1/predictions', {
         method: 'POST',
@@ -132,12 +144,20 @@ export async function POST(request: NextRequest) {
           'Authorization': `Token ${REPLICATE_API_TOKEN}`,
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'User-Agent': 'KidsDrawingAI/1.0'
         },
         body: requestBody,
         // 关键：禁用缓存
         cache: 'no-store',
         next: { revalidate: 0 },
         signal: controller.signal
+      });
+
+      console.log('📡 Replicate API响应状态:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
       });
       
       clearTimeout(timeoutId);

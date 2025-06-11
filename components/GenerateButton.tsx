@@ -1,7 +1,5 @@
 "use client";
 
-import React from 'react';
-
 interface GenerateButtonProps {
   onClick: () => void;
   disabled: boolean;
@@ -48,7 +46,7 @@ export default function GenerateButton({
               }}
             ></div>
           </div>
-          <p className="text-center text-xs text-gray-500 mt-2">May take up to 90 seconds</p>
+          <p className="text-center text-xs text-gray-500 mt-2">May take up to 60 seconds</p>
         </div>
       )}
     </div>

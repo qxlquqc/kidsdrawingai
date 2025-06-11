@@ -89,11 +89,13 @@ export default function TransformGallery() {
                 src={`/images/gallery/sketch${currentId}.jpg`}
                 alt={`Original sketch of ${galleryData[activeIndex].title}`}
                 fill
-                sizes="(max-width: 768px) 100vw, 25vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
                 className={`object-cover transition-opacity duration-300 
                   ${isImageLoaded(`sketch${currentId}`) ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => handleImageLoad(`sketch${currentId}`)}
                 onError={() => handleImageError(`sketch${currentId}`)}
+                loading="lazy"
+                quality={85}
               />
             </div>
           </div>
@@ -114,11 +116,13 @@ export default function TransformGallery() {
                   src={`/images/gallery/style${currentId}-${num}.jpg`}
                   alt={`${galleryData[activeIndex].title} style variation ${num}`}
                   fill
-                  sizes="(max-width: 768px) 100vw, 25vw"
+                  sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
                   className={`object-cover transition-opacity duration-300 
                     ${isImageLoaded(`style${currentId}-${num}`) ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => handleImageLoad(`style${currentId}-${num}`)}
                   onError={() => handleImageError(`style${currentId}-${num}`)}
+                  loading="lazy"
+                  quality={85}
                 />
               </div>
             </div>
@@ -169,11 +173,13 @@ export default function TransformGallery() {
                   src={`/images/gallery/sketch${item.id}.jpg`}
                   alt={item.title}
                   fill
-                  sizes="(max-width: 768px) 24vw, 8vw"
+                  sizes="(max-width: 640px) 24vw, (max-width: 768px) 20vw, (max-width: 1024px) 12vw, 8vw"
                   className={`object-cover transition-opacity duration-300 
                     ${isImageLoaded(`thumb-${item.id}`) ? 'opacity-100' : 'opacity-0'}`}
                   onLoad={() => handleImageLoad(`thumb-${item.id}`)}
                   onError={() => handleImageError(`thumb-${item.id}`)}
+                  loading="lazy"
+                  quality={75}
                 />
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>

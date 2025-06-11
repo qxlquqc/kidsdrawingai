@@ -39,7 +39,7 @@ export default function TransformImagePage() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<string>('any');
-  const [followDrawingStrength, setFollowDrawingStrength] = useState<number>(9);
+  // followDrawingStrength已移除，新API不再需要此参数
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [resultImageUrl, setResultImageUrl] = useState<string | null>(null);
@@ -87,7 +87,6 @@ export default function TransformImagePage() {
   }, [user, router]);
   
   const handleImageUpload = (url: string) => {
-    console.log('Image uploaded:', url);
     setUploadedImageUrl(url);
     // 如果已经生成过结果，重置结果
     if (resultImageUrl) {
@@ -96,19 +95,14 @@ export default function TransformImagePage() {
   };
   
   const handlePromptChange = (newPrompt: string) => {
-    console.log('Prompt changed:', newPrompt);
     setPrompt(newPrompt);
   };
   
   const handleStyleChange = (styleId: string) => {
-    console.log('Style changed:', styleId);
     setSelectedStyle(styleId);
   };
   
-  const handleFollowDrawingChange = (value: number) => {
-    console.log('Follow drawing strength changed:', value);
-    setFollowDrawingStrength(value);
-  };
+  // handleFollowDrawingChange已移除，新API不再需要此功能
   
   const handleGenerate = async () => {
     // 预检查权限
@@ -145,54 +139,38 @@ export default function TransformImagePage() {
       }
     }
 
-    if (!uploadedImageUrl) {
-      showError('Please upload a drawing first');
+    // 新的API支持只使用prompt生成，或图片+prompt转换
+    if (!uploadedImageUrl && !prompt.trim()) {
+      showError('Please upload an image or enter a prompt to generate');
       return;
     }
     
-    console.log('开始生成转换图像', {
-      uploadedImageUrl: uploadedImageUrl.substring(0, 30) + '...',
-      prompt: prompt || '(默认提示词)',
-      selectedStyle: selectedStyle,
-      followDrawingStrength: followDrawingStrength
-    });
+
     
     setIsGenerating(true);
     setProgress(0);
     
     try {
-      console.log('调用transformImage函数');
-      
-      const result = await transformImage(
+              const result = await transformImage(
         {
-          imageUrl: uploadedImageUrl,
+          imageUrl: uploadedImageUrl || '', // 提供空字符串作为默认值
           prompt: prompt,
           styleId: selectedStyle,
-          followDrawingStrength: followDrawingStrength,
         },
         (progressValue) => {
-          console.log(`转换进度: ${progressValue}%`);
           setProgress(progressValue);
         }
       );
       
-      console.log('transformImage函数执行完成', {
-        success: result.success,
-        hasOutputUrl: !!result.outputUrl,
-        error: result.error
-      });
+
       
       if (result.success && result.outputUrl) {
         setResultImageUrl(result.outputUrl);
-        console.log('成功设置结果图像URL', {
-          resultImageUrl: result.outputUrl.substring(0, 30) + '...'
-        });
         
         // 记录用户使用次数
         if (user?.id) {
           try {
             await recordUsage(user.id);
-            console.log('已成功记录用户使用次数');
             
             // 更新权限状态
             const newUsage = userPermissions.currentUsage + 1;
@@ -207,7 +185,7 @@ export default function TransformImagePage() {
             // 不阻止主流程，只记录错误
           }
         } else {
-          console.warn('无法记录使用次数：用户未登录');
+          
         }
         
         showSuccess('Your drawing has been transformed successfully!');
@@ -220,7 +198,7 @@ export default function TransformImagePage() {
       showError(`Failed to transform: ${error.message}`);
       setResultImageUrl(null);
     } finally {
-      console.log('生成过程结束，无论成功失败');
+      
       setIsGenerating(false);
     }
   };
@@ -244,7 +222,7 @@ export default function TransformImagePage() {
         <div className="container mx-auto max-w-2xl text-center">
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-8">
             <div className="text-6xl mb-6">🎨</div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">Choose a Plan to Start Creating</h1>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Choose a Plan to Start Creating</h2>
             <p className="text-gray-600 mb-8 text-lg">
               Transform your children's drawings into magical digital artwork with our AI-powered tool.
               Choose a plan that fits your family's creative needs.
@@ -275,7 +253,7 @@ export default function TransformImagePage() {
         <div className="container mx-auto max-w-2xl text-center">
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg p-8">
             <div className="text-6xl mb-6">📊</div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-4">Monthly Limit Reached</h1>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Monthly Limit Reached</h2>
             <p className="text-gray-600 mb-6 text-lg">
               You've used all {userPermissions.limit} transformations for this month. 
               Your limit will reset next month, or you can upgrade to a higher plan for more transformations.
@@ -312,8 +290,8 @@ export default function TransformImagePage() {
         <div className="text-center mb-8 glass-card p-6 rounded-2xl shadow-sm">
           <h1 className="text-4xl font-bold mb-3 gradient-text">Transform Your Drawing</h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Upload your child's drawing and watch our AI transform it into a magical digital artwork.
-            Perfect for preserving and celebrating their creativity!
+            Upload your child's drawing or simply describe what you want to create! 
+            Our AI will transform it into magical digital artwork. Perfect for preserving and celebrating creativity!
           </p>
         </div>
         
@@ -332,14 +310,13 @@ export default function TransformImagePage() {
             
             <StyleSelector
               onChange={handleStyleChange}
-              onFollowDrawingChange={handleFollowDrawingChange}
               disabled={isGenerating}
               initialStyle={selectedStyle}
             />
             
             <GenerateButton
               onClick={handleGenerate}
-              disabled={!uploadedImageUrl}
+              disabled={!uploadedImageUrl && !prompt.trim()}
               isGenerating={isGenerating}
               progress={progress}
             />

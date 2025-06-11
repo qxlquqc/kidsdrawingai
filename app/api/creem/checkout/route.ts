@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         email: user.email
       },
       success_url: `${request.nextUrl.origin}/dashboard`,
-      // cancel_url: creemEnv.CANCEL_URL, // Creem API 不支持此字段
+
       request_id: `${user.id}-${Date.now()}`,
       metadata: {
         internal_user_id: user.id,

@@ -72,7 +72,7 @@ export async function middleware(request: NextRequest) {
   
   // 记录密码重置相关路径的调试信息
   if (isAuthCallbackWithReset) {
-    console.log('Middleware detected password reset callback:', url.pathname, url.search)
+    // 可能无用，待确认 - 原密码重置callback检测日志
   }
   
   // 如果是需要认证的路由但用户未登录，重定向到登录页

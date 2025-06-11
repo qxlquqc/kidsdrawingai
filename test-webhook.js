@@ -603,8 +603,8 @@ if (require.main === module) {
     console.log('  node test-webhook.js idempotency     - Test idempotency');
     console.log('  node test-webhook.js                 - Test all events (default)');
     console.log('\n💸 Refund Testing:');
-    console.log('  node test-webhook.js refund_created         - 测试终端退款（完整metadata）');
-    console.log('  node test-webhook.js refund_created_manual  - 测试手动退款（缺少user_id）');
+    console.log('  node test-webhook.js refund_created         - Test terminal refund (full metadata)');
+    console.log('  node test-webhook.js refund_created_manual  - Test manual refund (missing user_id)');
     console.log('\n📋 Available event types:', Object.keys(mockEvents).join(', '));
   } else {
     testAllWebhooks();
